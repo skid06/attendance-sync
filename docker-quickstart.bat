@@ -54,7 +54,7 @@ echo Step 1: Building Docker Image
 echo =======================================
 echo.
 
-docker-compose build
+docker compose build
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -69,7 +69,7 @@ echo Step 2: Testing Connections
 echo =======================================
 echo.
 
-docker-compose run --rm zkteco-sync php artisan attendance:sync --test
+docker compose run --rm zkteco-sync php artisan attendance:sync --test
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -97,11 +97,11 @@ set /p choice="Enter your choice (1-3): "
 if "%choice%"=="1" (
     echo.
     echo Running manual sync...
-    docker-compose run --rm zkteco-sync php artisan attendance:sync --clear
+    docker compose run --rm zkteco-sync php artisan attendance:sync --clear
 ) else if "%choice%"=="2" (
     echo.
     echo Starting scheduled sync container...
-    docker-compose --profile scheduled up -d
+    docker compose --profile scheduled up -d
     echo.
     echo Scheduled sync is now running!
     echo It will sync every hour automatically.

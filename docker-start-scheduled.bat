@@ -12,7 +12,7 @@ echo Starting container...
 echo This will run sync every hour automatically.
 echo.
 
-docker-compose --profile scheduled up -d
+docker compose --profile scheduled up -d
 
 if %ERRORLEVEL% EQU 0 (
     echo.

@@ -34,7 +34,7 @@ if "%choice%"=="1" (
 ) else if "%choice%"=="3" (
     echo.
     echo Performing full cleanup...
-    docker-compose down
+    docker compose down
     docker system prune -a -f
     echo Done!
     echo.

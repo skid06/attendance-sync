@@ -11,7 +11,7 @@ cd /d "%~dp0"
 echo Building image with detailed output...
 echo.
 
-docker-compose build --progress=plain --no-cache
+docker compose build --progress=plain --no-cache
 
 if %ERRORLEVEL% EQU 0 (
     echo.

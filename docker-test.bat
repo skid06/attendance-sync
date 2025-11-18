@@ -11,7 +11,7 @@ cd /d "%~dp0"
 echo Testing connection to ZKTeco device and remote API...
 echo.
 
-docker-compose run --rm zkteco-sync php artisan attendance:sync --test
+docker compose run --rm zkteco-sync php artisan attendance:sync --test
 
 echo.
 if %ERRORLEVEL% EQU 0 (

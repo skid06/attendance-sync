@@ -9,11 +9,11 @@ echo.
 cd /d "%~dp0"
 
 echo Stopping containers...
-docker-compose down
+docker compose down
 
 echo.
 echo Starting containers...
-docker-compose --profile scheduled up -d
+docker compose --profile scheduled up -d
 
 if %ERRORLEVEL% EQU 0 (
     echo.

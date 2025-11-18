@@ -23,20 +23,20 @@ if "%choice%"=="1" (
     echo.
     echo Following logs... Press Ctrl+C to stop.
     echo.
-    docker-compose logs -f zkteco-sync-scheduled
+    docker compose logs -f zkteco-sync-scheduled
 ) else if "%choice%"=="2" (
     echo.
-    docker-compose logs --tail=100 zkteco-sync-scheduled
+    docker compose logs --tail=100 zkteco-sync-scheduled
     echo.
     pause
 ) else if "%choice%"=="3" (
     echo.
-    docker-compose logs --tail=50 zkteco-sync-scheduled
+    docker compose logs --tail=50 zkteco-sync-scheduled
     echo.
     pause
 ) else if "%choice%"=="4" (
     echo.
-    docker-compose logs zkteco-sync-scheduled
+    docker compose logs zkteco-sync-scheduled
     echo.
     pause
 ) else if "%choice%"=="5" (

@@ -9,7 +9,7 @@ echo.
 cd /d "%~dp0"
 
 echo Building image...
-docker-compose build
+docker compose build
 
 if %ERRORLEVEL% EQU 0 (
     echo.

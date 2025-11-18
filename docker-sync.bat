@@ -11,7 +11,7 @@ cd /d "%~dp0"
 echo Starting sync...
 echo.
 
-docker-compose run --rm zkteco-sync php artisan attendance:sync --clear
+docker compose run --rm zkteco-sync php artisan attendance:sync --clear
 
 echo.
 if %ERRORLEVEL% EQU 0 (
