@@ -1,0 +1,64 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Environment files (we'll mount .env separately)
+.env
+.env.backup
+.env.example
+
+# Node modules and npm files
+node_modules
+npm-debug.log
+yarn-error.log
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing and coverage
+tests
+.phpunit.result.cache
+coverage
+*.coverage
+
+# Storage and cache (will be created in container)
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+.phpunit.cache
+
+# Database (will be mounted as volume)
+database/*.sqlite
+database/*.sqlite-journal
+
+# Documentation
+*.md
+docs
+
+# Windows specific
+*.bat
+Thumbs.db
+
+# Vendor (will be installed during build)
+vendor
+
+# Build artifacts
+public/build
+public/hot
+
+# Misc
+.env.testing
+.phpunit.cache

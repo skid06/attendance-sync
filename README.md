@@ -2,6 +2,19 @@
 
 A Laravel console application that retrieves attendance data from ZKTeco biometric devices and sends it to a remote server via API.
 
+## Deployment Options
+
+Choose the deployment method that best suits your needs:
+
+- **Docker (Recommended):** See [DEPLOYMENT_DOCKER.md](DEPLOYMENT_DOCKER.md) for Windows 11 + Docker Desktop deployment
+  - Easiest setup with isolated environment
+  - Production-ready and portable
+  - No manual PHP configuration needed
+
+- **XAMPP:** See [DEPLOYMENT_WINDOWS.md](DEPLOYMENT_WINDOWS.md) for Windows 11 + XAMPP deployment
+  - Traditional PHP environment
+  - More manual configuration required
+
 ## Features
 
 - Connect to ZKTeco devices via TCP/IP

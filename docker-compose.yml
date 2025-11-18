@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  zkteco-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zkteco-attendance-sync
+    restart: unless-stopped
+
+    # Network mode: Use host network to access devices on local network
+    # This allows the container to access your ZKTeco device at 192.168.1.201
+    network_mode: host
+
+    # Environment variables (override .env file values if needed)
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - ZKTECO_DEVICE_IP=${ZKTECO_DEVICE_IP:-192.168.1.201}
+      - ZKTECO_DEVICE_PORT=${ZKTECO_DEVICE_PORT:-4370}
+      - REMOTE_API_URL=${REMOTE_API_URL}
+      - REMOTE_API_KEY=${REMOTE_API_KEY}
+      - REMOTE_API_TIMEOUT=${REMOTE_API_TIMEOUT:-30}
+      - SYNC_BATCH_SIZE=${SYNC_BATCH_SIZE:-100}
+      - AUTO_CLEAR_DEVICE=${AUTO_CLEAR_DEVICE:-false}
+      - RETRY_FAILED_RECORDS=${RETRY_FAILED_RECORDS:-true}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      - ZKTECO_DEBUG_LOGGING=${ZKTECO_DEBUG_LOGGING:-false}
+
+    # Mount volumes for persistence
+    volumes:
+      # Persist SQLite database
+      - ./database/database.sqlite:/app/database/database.sqlite
+      # Persist logs
+      - ./storage/logs:/app/storage/logs
+      # Mount .env file
+      - ./.env:/app/.env:ro
+
+    # Command to run (can be overridden)
+    command: php artisan attendance:sync --clear
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "php", "artisan", "attendance:sync", "--test"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Optional: Scheduled sync service (runs every hour)
+  zkteco-sync-scheduled:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zkteco-attendance-sync-scheduled
+    restart: unless-stopped
+
+    network_mode: host
+
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - ZKTECO_DEVICE_IP=${ZKTECO_DEVICE_IP:-192.168.1.201}
+      - ZKTECO_DEVICE_PORT=${ZKTECO_DEVICE_PORT:-4370}
+      - REMOTE_API_URL=${REMOTE_API_URL}
+      - REMOTE_API_KEY=${REMOTE_API_KEY}
+      - REMOTE_API_TIMEOUT=${REMOTE_API_TIMEOUT:-30}
+      - SYNC_BATCH_SIZE=${SYNC_BATCH_SIZE:-100}
+      - AUTO_CLEAR_DEVICE=${AUTO_CLEAR_DEVICE:-false}
+      - RETRY_FAILED_RECORDS=${RETRY_FAILED_RECORDS:-true}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      - ZKTECO_DEBUG_LOGGING=${ZKTECO_DEBUG_LOGGING:-false}
+
+    volumes:
+      - ./database/database.sqlite:/app/database/database.sqlite
+      - ./storage/logs:/app/storage/logs
+      - ./.env:/app/.env:ro
+
+    # Run sync every hour using a shell loop
+    # For production, consider using a proper scheduler or cron container
+    command: >
+      sh -c "while true; do
+        echo '[$(date)] Running scheduled sync...'
+        php artisan attendance:sync --clear
+        echo '[$(date)] Sync completed. Waiting 1 hour...'
+        sleep 3600
+      done"
+
+    profiles:
+      - scheduled  # Only start if explicitly enabled with --profile scheduled
+
+  # Optional: One-time test service
+  zkteco-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zkteco-attendance-test
+
+    network_mode: host
+
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - ZKTECO_DEVICE_IP=${ZKTECO_DEVICE_IP:-192.168.1.201}
+      - ZKTECO_DEVICE_PORT=${ZKTECO_DEVICE_PORT:-4370}
+      - REMOTE_API_URL=${REMOTE_API_URL}
+      - REMOTE_API_KEY=${REMOTE_API_KEY}
+
+    volumes:
+      - ./.env:/app/.env:ro
+
+    command: php artisan attendance:sync --test
+
+    profiles:
+      - test  # Only start if explicitly enabled with --profile test
