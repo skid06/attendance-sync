@@ -6,10 +6,16 @@ A Laravel console application that retrieves attendance data from ZKTeco biometr
 
 Choose the deployment method that best suits your needs:
 
-- **Docker (Recommended):** See [DEPLOYMENT_DOCKER.md](DEPLOYMENT_DOCKER.md) for Windows 11 + Docker Desktop deployment
-  - Easiest setup with isolated environment
+- **Laragon (Recommended for Windows):** See [DEPLOYMENT_LARAGON.md](DEPLOYMENT_LARAGON.md) for Windows deployment with Laragon
+  - Modern, fast, and lightweight
+  - Easy setup and management
+  - Built-in PHP 8.x and Composer
+  - Perfect for Windows environments
+
+- **Docker:** See [DEPLOYMENT_DOCKER.md](DEPLOYMENT_DOCKER.md) for Windows 11 + Docker Desktop deployment
+  - Isolated containerized environment
   - Production-ready and portable
-  - No manual PHP configuration needed
+  - Cross-platform compatibility
 
 - **XAMPP:** See [DEPLOYMENT_WINDOWS.md](DEPLOYMENT_WINDOWS.md) for Windows 11 + XAMPP deployment
   - Traditional PHP environment
