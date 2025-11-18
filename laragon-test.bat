@@ -8,18 +8,17 @@ echo.
 
 cd /d "%~dp0"
 
-REM Auto-detect PHP path in Laragon
-set PHP_PATH=C:\laragon\bin\php\php.exe
-
-REM Check if custom PHP path exists
-if exist "C:\laragon\bin\php\php-8.2-Win32\php.exe" (
-    set PHP_PATH=C:\laragon\bin\php\php-8.2-Win32\php.exe
+REM Load saved configuration
+if exist "laragon-config.bat" (
+    call laragon-config.bat
+    echo Using saved config: %PHP_PATH%
+) else (
+    echo ERROR: Configuration not found!
+    echo Please run laragon-quick-setup.bat first.
+    pause
+    exit /b 1
 )
-if exist "C:\laragon\bin\php\php-8.3-nts-Win32\php.exe" (
-    set PHP_PATH=C:\laragon\bin\php\php-8.3-nts-Win32\php.exe
-)
 
-echo Using PHP: %PHP_PATH%
 echo.
 
 echo Testing connection to ZKTeco device and remote API...
