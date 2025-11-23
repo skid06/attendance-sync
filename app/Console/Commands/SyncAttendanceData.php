@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Services\RemoteApiService;
-use App\Services\ZKTecoService;
+use App\Contracts\AttendanceDeviceInterface;
+use App\Services\AttendanceSyncService;
 use Illuminate\Console\Command;
 use Exception;
 
@@ -24,50 +24,54 @@ class SyncAttendanceData extends Command
      *
      * @var string
      */
-    protected $description = 'Sync attendance data from ZKTeco device to remote server';
+    protected $description = 'Sync attendance data from device to remote server';
 
-    private ZKTecoService $zktecoService;
-    private RemoteApiService $apiService;
+    public function __construct(
+        private AttendanceDeviceInterface $device,
+        private AttendanceSyncService $syncService
+    ) {
+        parent::__construct();
+    }
 
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
+        $deviceInfo = $this->device->getDeviceInfo();
+        $driverName = ucfirst($deviceInfo['type'] ?? 'Unknown');
+
         $this->info('╔═══════════════════════════════════════════════════════════╗');
-        $this->info('║       ZKTeco Attendance Data Sync                         ║');
+        $this->info("║       Attendance Data Sync ({$driverName})                      ");
         $this->info('╚═══════════════════════════════════════════════════════════╝');
         $this->newLine();
 
         try {
-            // Initialize services
-            $this->initializeServices();
-
             // Test connection mode
             if ($this->option('test')) {
                 return $this->testConnections();
             }
 
             // Connect to device
-            $this->info('🔌 Connecting to ZKTeco device...');
-            if (!$this->zktecoService->connect()) {
-                $this->error('❌ Failed to connect to ZKTeco device');
+            $this->info('Connecting to attendance device...');
+            if (!$this->device->connect()) {
+                $this->error('Failed to connect to attendance device');
                 return Command::FAILURE;
             }
-            $this->info('✅ Connected successfully');
+            $this->info('Connected successfully');
             $this->newLine();
 
             // Get attendance records
-            $this->info('📊 Fetching attendance records from device...');
-            $records = $this->zktecoService->getAttendance();
+            $this->info('Fetching attendance records from device...');
+            $records = $this->device->getAttendance();
 
             if (empty($records)) {
-                $this->warn('⚠️  No attendance records found on device');
-                $this->zktecoService->disconnect();
+                $this->warn('No attendance records found on device');
+                $this->device->disconnect();
                 return Command::SUCCESS;
             }
 
-            $this->info("✅ Retrieved " . count($records) . " attendance records");
+            $this->info("Retrieved " . count($records) . " attendance records");
             $this->newLine();
 
             // Display sample records
@@ -76,15 +80,19 @@ class SyncAttendanceData extends Command
             // Confirm before sending
             if (!$this->confirm('Do you want to send these records to the remote server?', true)) {
                 $this->warn('Sync cancelled by user');
-                $this->zktecoService->disconnect();
+                $this->device->disconnect();
                 return Command::SUCCESS;
             }
 
             // Send to remote server
-            $this->info('📤 Sending attendance records to remote server...');
+            $this->info('Sending attendance records to remote server...');
             $batchSize = (int) $this->option('batch-size');
 
-            $result = $this->apiService->sendAttendanceRecordsInBatches($records, $batchSize);
+            $result = $this->syncService->sendAttendanceRecordsInBatches(
+                $records,
+                $deviceInfo,
+                $batchSize
+            );
 
             $this->newLine();
             $this->displaySyncResults($result);
@@ -92,49 +100,34 @@ class SyncAttendanceData extends Command
             // Clear device records if requested and sync was successful
             if ($this->option('clear') && $result['success']) {
                 if ($this->confirm('Clear attendance records from device?', true)) {
-                    $this->info('🗑️  Clearing attendance records from device...');
-                    if ($this->zktecoService->clearAttendance()) {
-                        $this->info('✅ Attendance records cleared successfully');
+                    $this->info('Clearing attendance records from device...');
+                    if ($this->device->clearAttendance()) {
+                        $this->info('Attendance records cleared successfully');
                     } else {
-                        $this->error('❌ Failed to clear attendance records');
+                        $this->error('Failed to clear attendance records');
                     }
                 }
             }
 
             // Disconnect from device
-            $this->zktecoService->disconnect();
+            $this->device->disconnect();
 
             $this->newLine();
-            $this->info('✅ Sync process completed');
+            $this->info('Sync process completed');
 
             return $result['success'] ? Command::SUCCESS : Command::FAILURE;
 
         } catch (Exception $e) {
-            $this->error('❌ Error: ' . $e->getMessage());
-            $this->error($e->getTraceAsString());
+            $this->error('Error: ' . $e->getMessage());
 
-            if (isset($this->zktecoService)) {
-                $this->zktecoService->disconnect();
+            if (config('attendance.debug')) {
+                $this->error($e->getTraceAsString());
             }
+
+            $this->device->disconnect();
 
             return Command::FAILURE;
         }
-    }
-
-    /**
-     * Initialize services
-     */
-    private function initializeServices(): void
-    {
-        $deviceIp = config('zkteco.device_ip');
-        $devicePort = config('zkteco.device_port');
-
-        if (empty($deviceIp)) {
-            throw new Exception('ZKTeco device IP not configured. Please set ZKTECO_DEVICE_IP in .env');
-        }
-
-        $this->zktecoService = new ZKTecoService($deviceIp, $devicePort);
-        $this->apiService = new RemoteApiService();
     }
 
     /**
@@ -142,26 +135,25 @@ class SyncAttendanceData extends Command
      */
     private function testConnections(): int
     {
-        $this->info('🧪 Testing connections...');
+        $this->info('Testing connections...');
         $this->newLine();
 
-        // Test ZKTeco device connection
-        $this->info('Testing ZKTeco device connection...');
-        if ($this->zktecoService->connect()) {
-            $this->info('✅ ZKTeco device connection successful');
-            $this->zktecoService->disconnect();
+        // Test device connection
+        $this->info('Testing attendance device connection...');
+        if ($this->device->testConnection()) {
+            $this->info('Attendance device connection successful');
         } else {
-            $this->error('❌ ZKTeco device connection failed');
+            $this->error('Attendance device connection failed');
         }
 
         $this->newLine();
 
         // Test remote API connection
         $this->info('Testing remote API connection...');
-        if ($this->apiService->testConnection()) {
-            $this->info('✅ Remote API connection successful');
+        if ($this->syncService->testConnection()) {
+            $this->info('Remote API connection successful');
         } else {
-            $this->error('❌ Remote API connection failed');
+            $this->error('Remote API connection failed');
         }
 
         $this->newLine();
@@ -198,13 +190,13 @@ class SyncAttendanceData extends Command
     private function displaySyncResults(array $result): void
     {
         if ($result['success']) {
-            $this->info('✅ Sync completed successfully!');
+            $this->info('Sync completed successfully!');
         } else {
-            $this->error('❌ Sync completed with errors');
+            $this->error('Sync completed with errors');
         }
 
         $this->newLine();
-        $this->info("📊 Sync Summary:");
+        $this->info("Sync Summary:");
         $this->table(
             ['Metric', 'Value'],
             [

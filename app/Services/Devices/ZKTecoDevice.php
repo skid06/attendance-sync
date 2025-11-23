@@ -1,16 +1,18 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Devices;
 
+use App\Contracts\AttendanceDeviceInterface;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Jmrashed\Zkteco\Lib\ZKTeco;
 
-class ZKTecoService
+class ZKTecoDevice implements AttendanceDeviceInterface
 {
     private ZKTeco $zk;
     private string $ip;
     private int $port;
+    private bool $connected = false;
 
     public function __construct(string $ip, int $port = 4370)
     {
@@ -28,6 +30,7 @@ class ZKTecoService
             $connected = $this->zk->connect();
 
             if ($connected) {
+                $this->connected = true;
                 Log::info("Connected to ZKTeco device at {$this->ip}:{$this->port}");
                 return true;
             }
@@ -47,12 +50,25 @@ class ZKTecoService
     {
         try {
             $this->zk->disconnect();
+            $this->connected = false;
             Log::info("Disconnected from ZKTeco device");
             return true;
         } catch (Exception $e) {
             Log::error("ZKTeco disconnect error: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Test connection to the device
+     */
+    public function testConnection(): bool
+    {
+        if ($this->connect()) {
+            $this->disconnect();
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -67,7 +83,6 @@ class ZKTecoService
 
             $this->zk->enableDevice();
 
-            // Transform the raw data to match our expected format
             return $this->transformAttendanceData($rawAttendance);
         } catch (Exception $e) {
             Log::error("Error getting attendance: " . $e->getMessage());
@@ -102,7 +117,25 @@ class ZKTecoService
     }
 
     /**
-     * Transform attendance data from package format to our application format
+     * Get device information
+     */
+    public function getDeviceInfo(): array
+    {
+        try {
+            return [
+                'type' => 'zkteco',
+                'ip' => $this->ip,
+                'port' => $this->port,
+                'connected' => $this->connected,
+            ];
+        } catch (Exception $e) {
+            Log::error("Error getting device info: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Transform attendance data from package format to standardized format
      */
     private function transformAttendanceData(array $rawData): array
     {

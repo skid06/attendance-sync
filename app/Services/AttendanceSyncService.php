@@ -2,30 +2,28 @@
 
 namespace App\Services;
 
+use App\Contracts\AttendanceDeviceInterface;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class RemoteApiService
+class AttendanceSyncService
 {
-    private $baseUrl;
-    private $apiKey;
-    private $timeout;
+    private string $baseUrl;
+    private string $apiKey;
+    private int $timeout;
 
     public function __construct()
     {
-        $this->baseUrl = config('zkteco.remote_api_url');
-        $this->apiKey = config('zkteco.remote_api_key');
-        $this->timeout = config('zkteco.api_timeout', 30);
+        $this->baseUrl = config('attendance.remote_api.url');
+        $this->apiKey = config('attendance.remote_api.key');
+        $this->timeout = config('attendance.remote_api.timeout', 30);
     }
 
     /**
      * Send attendance records to remote server
-     *
-     * @param array $records
-     * @return array
      */
-    public function sendAttendanceRecords(array $records): array
+    public function sendAttendanceRecords(array $records, array $deviceInfo = []): array
     {
         try {
             if (empty($records)) {
@@ -47,10 +45,9 @@ class RemoteApiService
                 ])
                 ->post($this->baseUrl . '/attendance', [
                     'records' => $records,
-                    'device_info' => [
-                        'ip' => config('zkteco.device_ip'),
+                    'device_info' => array_merge($deviceInfo, [
                         'synced_at' => now()->toIso8601String(),
-                    ],
+                    ]),
                 ]);
 
             if ($response->successful()) {
@@ -96,14 +93,11 @@ class RemoteApiService
     }
 
     /**
-     * Send batch of attendance records (chunks)
-     *
-     * @param array $records
-     * @param int $batchSize
-     * @return array
+     * Send attendance records in batches
      */
-    public function sendAttendanceRecordsInBatches(array $records, int $batchSize = 100): array
+    public function sendAttendanceRecordsInBatches(array $records, array $deviceInfo = [], ?int $batchSize = null): array
     {
+        $batchSize = $batchSize ?? config('attendance.sync.batch_size', 100);
         $totalRecords = count($records);
         $batches = array_chunk($records, $batchSize);
         $totalSent = 0;
@@ -115,15 +109,14 @@ class RemoteApiService
         foreach ($batches as $index => $batch) {
             Log::info("Sending batch " . ($index + 1) . " of " . count($batches));
 
-            $result = $this->sendAttendanceRecords($batch);
+            $result = $this->sendAttendanceRecords($batch, $deviceInfo);
             $results[] = $result;
 
             $totalSent += $result['sent'];
             $totalFailed += $result['failed'];
 
-            // Optional: Add delay between batches to avoid overwhelming the server
             if ($index < count($batches) - 1) {
-                usleep(500000); // 0.5 second delay
+                usleep(500000); // 0.5 second delay between batches
             }
         }
 
@@ -140,8 +133,6 @@ class RemoteApiService
 
     /**
      * Test connection to remote API
-     *
-     * @return bool
      */
     public function testConnection(): bool
     {
@@ -168,10 +159,8 @@ class RemoteApiService
 
     /**
      * Get sync status from remote server
-     *
-     * @return array|null
      */
-    public function getSyncStatus(): ?array
+    public function getSyncStatus(array $deviceInfo = []): ?array
     {
         try {
             $response = Http::timeout($this->timeout)
@@ -179,9 +168,7 @@ class RemoteApiService
                     'Authorization' => 'Bearer ' . $this->apiKey,
                     'Accept' => 'application/json',
                 ])
-                ->get($this->baseUrl . '/attendance/sync-status', [
-                    'device_ip' => config('zkteco.device_ip'),
-                ]);
+                ->get($this->baseUrl . '/attendance/sync-status', $deviceInfo);
 
             if ($response->successful()) {
                 return $response->json();

@@ -1,6 +1,6 @@
-# ZKTeco Attendance Sync Application
+# Attendance Sync Application
 
-A Laravel console application that retrieves attendance data from ZKTeco biometric devices and sends it to a remote server via API.
+A Laravel console application that retrieves attendance data from biometric devices and sends it to a remote server via API. Built with a contract-based architecture to support multiple device types.
 
 ## Deployment Options
 
@@ -23,7 +23,8 @@ Choose the deployment method that best suits your needs:
 
 ## Features
 
-- Connect to ZKTeco devices via TCP/IP
+- **Contract-based architecture** - Easily add support for new device types
+- Connect to attendance devices via TCP/IP
 - Retrieve attendance records (check-in/check-out data)
 - Send data to remote server in batches
 - Clear device records after successful sync
@@ -31,27 +32,38 @@ Choose the deployment method that best suits your needs:
 - Detailed logging and error handling
 - Configurable batch sizes and retry logic
 
+## Supported Devices
+
+- **ZKTeco** - Biometric attendance devices (default)
+- **Null** - Testing driver (no actual device connection)
+
 ## Requirements
 
 - PHP 8.1 or higher
 - Composer
-- Network access to ZKTeco device
-- ZKTeco device must be configured for TCP/IP communication
+- Network access to attendance device
+- Device must be configured for TCP/IP communication
 
 ## Installation
 
-The application is already set up in `/Users/melchorvalencia/Documents/zkteco-attendance`
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
 ## Configuration
 
-### 1. Configure ZKTeco Device
+### 1. Configure Attendance Device
 
-Update the `.env` file with your ZKTeco device details:
+Update the `.env` file with your device details:
 
 ```env
-# ZKTeco Device Configuration
-ZKTECO_DEVICE_IP=192.168.1.201    # Your device IP address
-ZKTECO_DEVICE_PORT=4370           # Default ZKTeco port
+# Attendance Device Configuration
+# Supported drivers: zkteco, null (for testing)
+ATTENDANCE_DRIVER=zkteco
+ATTENDANCE_DEVICE_IP=192.168.1.201    # Your device IP address
+ATTENDANCE_DEVICE_PORT=4370           # Default ZKTeco port
 ```
 
 ### 2. Configure Remote API
@@ -60,28 +72,22 @@ Set up your remote server API endpoint:
 
 ```env
 # Remote API Configuration
-REMOTE_API_URL=https://api.example.com/api/v1
-REMOTE_API_KEY=your-api-key-here
-REMOTE_API_TIMEOUT=30
+ATTENDANCE_API_URL=https://api.example.com/api/v1
+ATTENDANCE_API_KEY=your-api-key-here
+ATTENDANCE_API_TIMEOUT=30
 ```
 
 ### 3. Sync Settings (Optional)
 
 ```env
 # Sync Settings
-SYNC_BATCH_SIZE=100              # Records per batch
-AUTO_CLEAR_DEVICE=false          # Auto-clear after sync
-RETRY_FAILED_RECORDS=true
-MAX_RETRIES=3
+ATTENDANCE_SYNC_BATCH_SIZE=100       # Records per batch
+ATTENDANCE_AUTO_CLEAR=false          # Auto-clear after sync
+ATTENDANCE_RETRY_FAILED=true
+ATTENDANCE_MAX_RETRIES=3
 ```
 
 ## Usage
-
-Navigate to the project directory:
-
-```bash
-cd /Users/melchorvalencia/Documents/zkteco-attendance
-```
 
 ### Basic Sync Command
 
@@ -93,7 +99,7 @@ php artisan attendance:sync
 
 ### Test Connections
 
-Test connectivity to both the ZKTeco device and remote API:
+Test connectivity to both the device and remote API:
 
 ```bash
 php artisan attendance:sync --test
@@ -129,24 +135,63 @@ php artisan attendance:sync --clear --batch-size=200
 | `--clear` | Clear attendance records from device after successful sync |
 | `--batch-size=N` | Number of records to send per batch (default: 100) |
 
-## Scheduling (Optional)
+## Architecture
 
-To run the sync automatically, add it to Laravel's scheduler in `app/Console/Kernel.php`:
+This application uses Laravel's contract (interface) pattern for flexibility:
+
+```
+app/
+├── Contracts/
+│   └── AttendanceDeviceInterface.php    # Device contract
+├── Console/Commands/
+│   └── SyncAttendanceData.php           # Main console command
+├── Services/
+│   ├── AttendanceSyncService.php        # Remote API integration
+│   └── Devices/
+│       ├── ZKTecoDevice.php             # ZKTeco implementation
+│       └── NullDevice.php               # Testing implementation
+├── Providers/
+│   └── AttendanceServiceProvider.php    # Service binding
+config/
+└── attendance.php                        # Configuration file
+```
+
+### Adding a New Device Driver
+
+1. Create a new class implementing `AttendanceDeviceInterface`:
 
 ```php
-protected function schedule(Schedule $schedule)
+namespace App\Services\Devices;
+
+use App\Contracts\AttendanceDeviceInterface;
+
+class HikvisionDevice implements AttendanceDeviceInterface
 {
-    // Sync every hour
-    $schedule->command('attendance:sync --clear')
-             ->hourly()
-             ->withoutOverlapping();
+    public function connect(): bool { /* ... */ }
+    public function disconnect(): bool { /* ... */ }
+    public function getAttendance(): array { /* ... */ }
+    public function clearAttendance(): bool { /* ... */ }
+    public function testConnection(): bool { /* ... */ }
+    public function getDeviceInfo(): array { /* ... */ }
 }
 ```
 
-Then set up a cron job:
+2. Add configuration in `config/attendance.php`:
 
-```bash
-* * * * * cd /Users/melchorvalencia/Documents/zkteco-attendance && php artisan schedule:run >> /dev/null 2>&1
+```php
+'devices' => [
+    'hikvision' => [
+        'driver' => 'hikvision',
+        'ip' => env('ATTENDANCE_DEVICE_IP'),
+        'port' => env('ATTENDANCE_DEVICE_PORT', 8000),
+    ],
+],
+```
+
+3. Register in `AttendanceServiceProvider`:
+
+```php
+'hikvision' => new HikvisionDevice($config['ip'], $config['port']),
 ```
 
 ## API Endpoint Requirements
@@ -188,6 +233,7 @@ Request body:
         }
     ],
     "device_info": {
+        "type": "zkteco",
         "ip": "192.168.1.201",
         "synced_at": "2025-11-06T09:35:00Z"
     }
@@ -203,13 +249,6 @@ Response:
 }
 ```
 
-### 3. Get Sync Status (Optional)
-
-```
-GET /attendance/sync-status?device_ip=192.168.1.201
-Authorization: Bearer {API_KEY}
-```
-
 ## Data Structure
 
 ### Attendance Record Fields
@@ -222,31 +261,13 @@ Each attendance record contains:
 - `status`: Attendance type (Check In, Check Out, Break Out, Break In, etc.)
 - `raw_timestamp`: Unix timestamp
 
-### Verify Types
-
-- Password (0)
-- Fingerprint (1)
-- Card (2)
-- Fingerprint and Password (3)
-- Fingerprint and Card (4)
-- Face (15)
-
-### Status Types
-
-- Check In (0)
-- Check Out (1)
-- Break Out (2)
-- Break In (3)
-- Overtime In (4)
-- Overtime Out (5)
-
 ## Troubleshooting
 
 ### Cannot Connect to Device
 
 1. Verify the device IP address is correct
 2. Ensure the device is on the same network or accessible
-3. Check if port 4370 is open on your firewall
+3. Check if the device port is open on your firewall
 4. Verify the device has TCP/IP communication enabled
 
 Test connection:
@@ -261,25 +282,6 @@ php artisan attendance:sync --test
 3. Ensure your server has internet access
 4. Check API server logs for errors
 
-### No Records Retrieved
-
-- The device may have no attendance records stored
-- Try creating a test attendance record on the device
-- Check device logs for any errors
-
-### Socket Errors
-
-If you see socket-related errors, ensure PHP sockets extension is enabled:
-
-```bash
-php -m | grep sockets
-```
-
-If not installed:
-```bash
-brew install php --with-sockets
-```
-
 ## Logs
 
 Application logs are stored in `storage/logs/laravel.log`
@@ -291,20 +293,7 @@ tail -f storage/logs/laravel.log
 
 Enable debug logging in `.env`:
 ```env
-ZKTECO_DEBUG_LOGGING=true
-```
-
-## File Structure
-
-```
-app/
-├── Console/Commands/
-│   └── SyncAttendanceData.php    # Main console command
-├── Services/
-│   ├── ZKTecoService.php         # ZKTeco device communication
-│   └── RemoteApiService.php      # Remote API integration
-config/
-└── zkteco.php                     # Configuration file
+ATTENDANCE_DEBUG=true
 ```
 
 ## Security Considerations
@@ -314,14 +303,6 @@ config/
 3. Use HTTPS for remote API communication
 4. Implement proper authentication on your remote API
 5. Consider encrypting sensitive data in transit
-
-## Support
-
-For issues or questions:
-
-1. Check the logs: `storage/logs/laravel.log`
-2. Run connection test: `php artisan attendance:sync --test`
-3. Verify device and API configurations in `.env`
 
 ## License
 
