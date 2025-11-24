@@ -2,11 +2,11 @@
 REM Quick setup for Laragon - Manual PHP path entry
 
 echo =======================================
-echo ZKTeco Quick Setup (Laragon)
+echo Attendance Quick Setup (Laragon)
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo Detecting PHP installations...
 echo.

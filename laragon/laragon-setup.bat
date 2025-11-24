@@ -2,11 +2,11 @@
 REM Initial setup script for Laragon deployment
 
 echo =======================================
-echo ZKTeco Attendance Setup (Laragon)
+echo Attendance Sync Setup (Laragon)
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 REM Auto-detect paths
 set PHP_PATH=C:\laragon\bin\php\php.exe
@@ -103,7 +103,7 @@ if %ERRORLEVEL% EQU 0 (
     echo.
     echo Connection test failed. Please check:
     echo 1. Your .env configuration
-    echo 2. Network connectivity to ZKTeco device
+    echo 2. Network connectivity to Attendance device
     echo 3. Remote API endpoint and credentials
 )
 

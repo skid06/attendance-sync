@@ -1,12 +1,12 @@
 @echo off
-REM Test ZKTeco connection using Laragon PHP
+REM Test Attendance connection using Laragon PHP
 
 echo =======================================
-echo Testing ZKTeco Connections (Laragon)
+echo Testing Attendance Connections (Laragon)
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 REM Load saved configuration
 if exist "laragon-config.bat" (
@@ -21,7 +21,7 @@ if exist "laragon-config.bat" (
 
 echo.
 
-echo Testing connection to ZKTeco device and remote API...
+echo Testing connection to Attendance device and remote API...
 echo.
 
 "%PHP_PATH%" artisan attendance:sync --test

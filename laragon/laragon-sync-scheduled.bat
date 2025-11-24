@@ -2,7 +2,7 @@
 REM Scheduled sync script for Windows Task Scheduler (Laragon)
 REM This script runs silently and logs output
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 REM Auto-detect PHP path in Laragon
 set PHP_PATH=C:\laragon\bin\php\php.exe

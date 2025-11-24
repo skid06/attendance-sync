@@ -6,7 +6,7 @@ echo Installing Dependencies (Laragon)
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 REM Auto-detect Composer path
 set COMPOSER_PATH=C:\laragon\bin\composer\composer.bat

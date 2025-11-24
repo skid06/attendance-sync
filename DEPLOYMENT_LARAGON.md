@@ -1,6 +1,6 @@
-# Deploying ZKTeco Attendance Sync on Windows with Laragon
+# Deploying Attendance Sync on Windows with Laragon
 
-This guide will help you deploy the Laravel ZKTeco attendance application on Windows using Laragon - a modern, lightweight, and portable PHP development environment.
+This guide will help you deploy the Laravel attendance sync application on Windows using Laragon - a modern, lightweight, and portable PHP development environment.
 
 ## Why Laragon?
 
@@ -47,15 +47,15 @@ After installing Laragon:
 
 1. Copy your project folder to `C:\laragon\www\`
    ```cmd
-   xcopy C:\Users\m.valencia\Documents\zkteco-attendance C:\laragon\www\zkteco-attendance /E /I
+   xcopy C:\path\to\attendance-sync C:\laragon\www\attendance-sync /E /I
    ```
 
-2. The project will be at: `C:\laragon\www\zkteco-attendance`
+2. The project will be at: `C:\laragon\www\attendance-sync`
 
 **Option B: Create a Symlink (Advanced)**
 
 ```cmd
-mklink /D C:\laragon\www\zkteco-attendance C:\Users\m.valencia\Documents\zkteco-attendance
+mklink /D C:\laragon\www\attendance-sync C:\path\to\attendance-sync
 ```
 
 ### Step 3: Install Composer Dependencies
@@ -63,7 +63,7 @@ mklink /D C:\laragon\www\zkteco-attendance C:\Users\m.valencia\Documents\zkteco-
 1. In Laragon, right-click on the window → **Terminal** (or press Ctrl+Alt+T)
 2. Navigate to your project:
    ```bash
-   cd zkteco-attendance
+   cd attendance-sync
    ```
 3. Install dependencies:
    ```bash
@@ -83,30 +83,31 @@ mklink /D C:\laragon\www\zkteco-attendance C:\Users\m.valencia\Documents\zkteco-
 
 3. Configure your settings:
    ```env
-   APP_NAME="ZKTeco Attendance"
+   APP_NAME="Attendance Sync"
    APP_ENV=production
    APP_DEBUG=false
 
    # Database (SQLite)
    DB_CONNECTION=sqlite
 
-   # ZKTeco Device Configuration
-   ZKTECO_DEVICE_IP=192.168.1.201
-   ZKTECO_DEVICE_PORT=4370
+   # Attendance Device Configuration
+   ATTENDANCE_DRIVER=zkteco
+   ATTENDANCE_DEVICE_IP=192.168.1.201
+   ATTENDANCE_DEVICE_PORT=4370
 
    # Remote API Configuration
-   REMOTE_API_URL=https://your-server.com/api/v1
-   REMOTE_API_KEY=your-actual-api-key-here
-   REMOTE_API_TIMEOUT=30
+   ATTENDANCE_API_URL=https://your-server.com/api/v1
+   ATTENDANCE_API_KEY=your-actual-api-key-here
+   ATTENDANCE_API_TIMEOUT=30
 
    # Sync Settings
-   SYNC_BATCH_SIZE=100
-   AUTO_CLEAR_DEVICE=false
-   RETRY_FAILED_RECORDS=true
-   MAX_RETRIES=3
+   ATTENDANCE_SYNC_BATCH_SIZE=100
+   ATTENDANCE_AUTO_CLEAR=false
+   ATTENDANCE_RETRY_FAILED=true
+   ATTENDANCE_MAX_RETRIES=3
 
    # Debug Logging
-   ZKTECO_DEBUG_LOGGING=false
+   ATTENDANCE_DEBUG=false
    ```
 
 4. Generate application key:
@@ -135,7 +136,7 @@ mklink /D C:\laragon\www\zkteco-attendance C:\Users\m.valencia\Documents\zkteco-
 
 2. You should see:
    ```
-   ✅ ZKTeco device connection successful
+   ✅ Attendance device connection successful
    ✅ Remote API connection successful
    ```
 
@@ -157,28 +158,22 @@ php artisan attendance:sync --clear
 
 ### Method 1: Windows Task Scheduler (Recommended)
 
-1. **Create a sync batch file** in your project root `C:\laragon\www\zkteco-attendance\laragon-sync.bat`:
-
-   ```batch
-   @echo off
-   cd /d C:\laragon\www\zkteco-attendance
-   C:\laragon\bin\php\php-8.2-Win32\php.exe artisan attendance:sync --clear >> storage\logs\sync.log 2>&1
-   ```
+1. **Use the provided batch script** `laragon/laragon-sync.bat`
 
 2. **Create scheduled task via Task Scheduler GUI:**
 
    - Press `Win + R`, type `taskschd.msc`, press Enter
    - Click **Create Basic Task**
-   - Name: `ZKTeco Laragon Sync`
+   - Name: `Attendance Laragon Sync`
    - Trigger: Daily, repeat every 1 hour
    - Action: Start a program
-   - Program: `C:\laragon\www\zkteco-attendance\laragon-sync.bat`
+   - Program: `C:\laragon\www\attendance-sync\laragon\laragon-sync.bat`
    - Click Finish
 
 3. **Or create via command line:**
 
    ```cmd
-   schtasks /create /tn "ZKTeco Laragon Sync" /tr "C:\laragon\www\zkteco-attendance\laragon-sync.bat" /sc hourly /st 09:00
+   schtasks /create /tn "Attendance Laragon Sync" /tr "C:\laragon\www\attendance-sync\laragon\laragon-sync.bat" /sc hourly /st 09:00
    ```
 
 ### Method 2: Using Laragon's Task Scheduler Feature
@@ -201,61 +196,45 @@ Laragon can run Laravel scheduler automatically:
 
    ```batch
    @echo off
-   cd /d C:\laragon\www\zkteco-attendance
+   cd /d C:\laragon\www\attendance-sync
    C:\laragon\bin\php\php-8.2-Win32\php.exe artisan schedule:run
    ```
 
 3. **Set up Windows Task Scheduler to run every minute:**
 
    ```cmd
-   schtasks /create /tn "ZKTeco Laravel Scheduler" /tr "C:\laragon\www\zkteco-attendance\laragon-scheduler.bat" /sc minute /st 09:00
+   schtasks /create /tn "Attendance Laravel Scheduler" /tr "C:\laragon\www\attendance-sync\laragon\laragon-scheduler.bat" /sc minute /st 09:00
    ```
 
    This runs Laravel's scheduler every minute, which then executes your hourly task.
 
 ## Batch Scripts for Easy Management
 
-Create these batch files in your project root for easy management:
+We've provided batch scripts in the `laragon/` folder for easy management:
 
-### `laragon-test.bat` - Test Connection
-
-```batch
-@echo off
-cd /d C:\laragon\www\zkteco-attendance
-C:\laragon\bin\php\php-8.2-Win32\php.exe artisan attendance:sync --test
-pause
+### `laragon/laragon-test.bat` - Test Connection
+```cmd
+laragon\laragon-test.bat
 ```
 
-### `laragon-sync.bat` - Manual Sync
-
-```batch
-@echo off
-cd /d C:\laragon\www\zkteco-attendance
-C:\laragon\bin\php\php-8.2-Win32\php.exe artisan attendance:sync --clear
-pause
+### `laragon/laragon-sync.bat` - Manual Sync
+```cmd
+laragon\laragon-sync.bat
 ```
 
-### `laragon-logs.bat` - View Logs
-
-```batch
-@echo off
-cd /d C:\laragon\www\zkteco-attendance
-type storage\logs\laravel.log
-pause
+### `laragon/laragon-logs.bat` - View Logs
+```cmd
+laragon\laragon-logs.bat
 ```
 
-### `laragon-install.bat` - Install/Update Dependencies
-
-```batch
-@echo off
-cd /d C:\laragon\www\zkteco-attendance
-C:\laragon\bin\composer\composer.bat install --no-dev --optimize-autoloader
-pause
+### `laragon/laragon-install.bat` - Install/Update Dependencies
+```cmd
+laragon\laragon-install.bat
 ```
 
 ## Network Configuration
 
-### Accessing ZKTeco Device on Local Network
+### Accessing Device on Local Network
 
 1. **Test network connectivity:**
    ```cmd
@@ -318,10 +297,10 @@ Verify PHP path in your batch files. Check your actual PHP version:
 
 ```cmd
 # View entire log
-type C:\laragon\www\zkteco-attendance\storage\logs\laravel.log
+type C:\laragon\www\attendance-sync\storage\logs\laravel.log
 
 # View last 50 lines
-powershell Get-Content C:\laragon\www\zkteco-attendance\storage\logs\laravel.log -Tail 50
+powershell Get-Content C:\laragon\www\attendance-sync\storage\logs\laravel.log -Tail 50
 ```
 
 ## Using Laragon Features
@@ -349,8 +328,8 @@ Before going live:
 
 - [ ] Set `APP_ENV=production` in `.env`
 - [ ] Set `APP_DEBUG=false` in `.env`
-- [ ] Set correct `ZKTECO_DEVICE_IP`
-- [ ] Set correct `REMOTE_API_URL` and `REMOTE_API_KEY`
+- [ ] Set correct `ATTENDANCE_DEVICE_IP`
+- [ ] Set correct `ATTENDANCE_API_URL` and `ATTENDANCE_API_KEY`
 - [ ] Test device connection: `php artisan attendance:sync --test`
 - [ ] Test manual sync: `php artisan attendance:sync`
 - [ ] Configure Windows Task Scheduler for automatic sync
@@ -390,13 +369,13 @@ When you need to update:
 
 ```batch
 @echo off
-set BACKUP_DIR=C:\ZKTeco-Backups
+set BACKUP_DIR=C:\Attendance-Backups
 set DATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
 mkdir %BACKUP_DIR%\%DATE% 2>nul
 
-copy C:\laragon\www\zkteco-attendance\database\database.sqlite %BACKUP_DIR%\%DATE%\
-copy C:\laragon\www\zkteco-attendance\.env %BACKUP_DIR%\%DATE%\
-xcopy C:\laragon\www\zkteco-attendance\storage\logs %BACKUP_DIR%\%DATE%\logs\ /E /I
+copy C:\laragon\www\attendance-sync\database\database.sqlite %BACKUP_DIR%\%DATE%\
+copy C:\laragon\www\attendance-sync\.env %BACKUP_DIR%\%DATE%\
+xcopy C:\laragon\www\attendance-sync\storage\logs %BACKUP_DIR%\%DATE%\logs\ /E /I
 
 echo Backup completed: %BACKUP_DIR%\%DATE%
 pause
@@ -405,8 +384,8 @@ pause
 ### Restore
 
 ```cmd
-copy C:\ZKTeco-Backups\20241118\database.sqlite C:\laragon\www\zkteco-attendance\database\
-copy C:\ZKTeco-Backups\20241118\.env C:\laragon\www\zkteco-attendance\
+copy C:\Attendance-Backups\20241118\database.sqlite C:\laragon\www\attendance-sync\database\
+copy C:\Attendance-Backups\20241118\.env C:\laragon\www\attendance-sync\
 ```
 
 ## Performance Tips
@@ -439,23 +418,11 @@ copy C:\ZKTeco-Backups\20241118\.env C:\laragon\www\zkteco-attendance\
    - Update project dependencies: `composer update`
 
 3. **Use HTTPS for API**
-   - Always use `https://` in `REMOTE_API_URL`
+   - Always use `https://` in `ATTENDANCE_API_URL`
 
 4. **Limit access**
    - Don't expose Laragon to the internet
    - Use firewall rules
-
-## Advantages of Laragon
-
-| Feature | XAMPP | Laragon | Docker |
-|---------|-------|---------|--------|
-| **Installation** | Complex | Simple | Complex on Windows |
-| **Resource Usage** | Heavy | Light | Heavy |
-| **PHP Versions** | Single | Multiple, switchable | Configurable |
-| **Startup Time** | Slow | Fast | Slow |
-| **Portable** | No | Yes | No |
-| **Easy Updates** | Manual | Built-in | Rebuild image |
-| **Windows Integration** | Good | Excellent | Limited |
 
 ## Common Commands Reference
 
@@ -499,7 +466,7 @@ For Laragon-specific issues:
 1. Check Laragon logs: `C:\laragon\logs`
 2. Check application logs: `storage\logs\laravel.log`
 3. Verify `.env` configuration
-4. Test network connectivity to ZKTeco device
+4. Test network connectivity to attendance device
 
 For application issues, refer to the main [README.md](README.md).
 

@@ -2,11 +2,11 @@
 REM Run manual sync using Laragon PHP
 
 echo =======================================
-echo ZKTeco Attendance Manual Sync (Laragon)
+echo Attendance Sync Manual Sync (Laragon)
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 REM Load saved configuration
 if exist "laragon-config.bat" (

@@ -2,11 +2,11 @@
 REM View application logs (Laragon)
 
 echo =======================================
-echo ZKTeco Application Logs
+echo Attendance Application Logs
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo Select log view option:
 echo.

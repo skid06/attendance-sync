@@ -6,7 +6,7 @@ echo Create Scheduled Task (Laragon)
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 set SCRIPT_PATH=%~dp0laragon-sync-scheduled.bat
 
@@ -28,7 +28,7 @@ echo.
 echo Creating scheduled task...
 echo.
 
-schtasks /create /tn "ZKTeco Laragon Sync" /tr "%SCRIPT_PATH%" /sc hourly /st 09:00 /f
+schtasks /create /tn "Attendance Laragon Sync" /tr "%SCRIPT_PATH%" /sc hourly /st 09:00 /f
 
 if %ERRORLEVEL% EQU 0 (
     echo.
@@ -36,17 +36,17 @@ if %ERRORLEVEL% EQU 0 (
     echo Task created successfully!
     echo =======================================
     echo.
-    echo Task name: ZKTeco Laragon Sync
+    echo Task name: Attendance Laragon Sync
     echo Schedule: Every hour starting at 9:00 AM
     echo.
     echo To view the task:
-    echo   schtasks /query /tn "ZKTeco Laragon Sync"
+    echo   schtasks /query /tn "Attendance Laragon Sync"
     echo.
     echo To run the task manually:
-    echo   schtasks /run /tn "ZKTeco Laragon Sync"
+    echo   schtasks /run /tn "Attendance Laragon Sync"
     echo.
     echo To delete the task:
-    echo   schtasks /delete /tn "ZKTeco Laragon Sync"
+    echo   schtasks /delete /tn "Attendance Laragon Sync"
 ) else (
     echo.
     echo =======================================
