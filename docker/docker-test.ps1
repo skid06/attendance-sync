@@ -6,7 +6,7 @@ Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Change to script directory
-Set-Location $PSScriptRoot
+Set-Location "$PSScriptRoot/.."
 
 Write-Host "Testing connection to ZKTeco device and remote API..." -ForegroundColor Yellow
 Write-Host ""

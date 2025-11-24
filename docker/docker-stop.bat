@@ -6,7 +6,7 @@ echo Stopping ZKTeco Docker Containers
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo Stopping containers...
 docker compose down

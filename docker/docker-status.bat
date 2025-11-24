@@ -6,7 +6,7 @@ echo ZKTeco Docker Container Status
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo Running containers:
 echo =======================================

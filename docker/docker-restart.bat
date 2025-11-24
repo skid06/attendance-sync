@@ -1,26 +1,28 @@
 @echo off
-REM Run manual sync using Docker
+REM Restart ZKTeco Docker containers
 
 echo =======================================
-echo ZKTeco Attendance Manual Sync
+echo Restarting ZKTeco Docker Containers
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
-echo Starting sync...
-echo.
-
-docker compose run --rm zkteco-sync php artisan attendance:sync --clear
+echo Stopping containers...
+docker compose down
 
 echo.
+echo Starting containers...
+docker compose --profile scheduled up -d
+
 if %ERRORLEVEL% EQU 0 (
+    echo.
     echo =======================================
-    echo Sync completed successfully!
+    echo Containers restarted successfully!
     echo =======================================
 ) else (
     echo =======================================
-    echo Sync failed! Check logs for details.
+    echo Failed to restart containers!
     echo =======================================
 )
 

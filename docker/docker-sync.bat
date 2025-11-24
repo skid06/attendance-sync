@@ -1,27 +1,26 @@
 @echo off
-REM Test ZKTeco device and API connection using Docker
+REM Run manual sync using Docker
 
 echo =======================================
-echo Testing ZKTeco Connections
+echo Attendance Sync Manual Sync
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
-echo Testing connection to ZKTeco device and remote API...
+echo Starting sync...
 echo.
 
-docker compose run --rm zkteco-sync php artisan attendance:sync --test
+docker compose run --rm zkteco-sync php artisan attendance:sync --clear
 
 echo.
 if %ERRORLEVEL% EQU 0 (
     echo =======================================
-    echo Connection test completed successfully!
+    echo Sync completed successfully!
     echo =======================================
 ) else (
     echo =======================================
-    echo Connection test failed!
-    echo Check your .env configuration.
+    echo Sync failed! Check logs for details.
     echo =======================================
 )
 

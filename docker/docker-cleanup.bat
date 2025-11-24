@@ -9,7 +9,7 @@ echo WARNING: This will remove unused Docker resources.
 echo Your database and logs will NOT be affected.
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo Select cleanup option:
 echo.

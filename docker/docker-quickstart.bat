@@ -2,11 +2,11 @@
 REM Quick start setup for ZKTeco Docker deployment
 
 echo =======================================
-echo ZKTeco Attendance Docker Quick Start
+echo Attendance Sync Docker Quick Start
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 REM Check if Docker is installed
 docker --version >nul 2>&1

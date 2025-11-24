@@ -5,7 +5,7 @@ Write-Host "ZKTeco Manual Sync" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
-Set-Location $PSScriptRoot
+Set-Location "$PSScriptRoot/.."
 
 # Check if .env exists
 if (-not (Test-Path ".env")) {
@@ -35,7 +35,7 @@ docker run --rm --network host `
     -v ${PWD}/.env:/app/.env:ro `
     -v ${PWD}/database/database.sqlite:/app/database/database.sqlite `
     -v ${PWD}/storage/logs:/app/storage/logs `
-    zkteco-attendance-sync:latest php artisan attendance:sync --clear
+    attendance-sync-sync:latest php artisan attendance:sync --clear
 
 Write-Host ""
 if ($LASTEXITCODE -eq 0) {

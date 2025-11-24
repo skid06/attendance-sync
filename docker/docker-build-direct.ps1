@@ -1,15 +1,14 @@
-# PowerShell script to build Docker image for ZKTeco Attendance Sync
+# Build Docker image directly without docker-compose
 
 Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host "Building ZKTeco Attendance Docker Image" -ForegroundColor Cyan
+Write-Host "Building ZKTeco Docker Image (Direct)" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Change to script directory
-Set-Location $PSScriptRoot
+Set-Location "$PSScriptRoot/.."
 
 Write-Host "Building image..." -ForegroundColor Yellow
-docker compose build
+docker build -t attendance-sync-sync:latest .
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
@@ -17,14 +16,14 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Build completed successfully!" -ForegroundColor Green
     Write-Host "=======================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Next steps:" -ForegroundColor Yellow
-    Write-Host "1. Run: .\docker-test.ps1 to test connections" -ForegroundColor White
-    Write-Host "2. Run: .\docker-sync.ps1 to sync manually" -ForegroundColor White
-    Write-Host "3. Run: .\docker-start-scheduled.ps1 for automatic hourly sync" -ForegroundColor White
+    Write-Host "Image built: attendance-sync-sync:latest" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "To test connection, run:" -ForegroundColor Yellow
+    Write-Host "docker run --rm --network host -v `${PWD}/.env:/app/.env:ro attendance-sync-sync:latest php artisan attendance:sync --test" -ForegroundColor White
 } else {
     Write-Host ""
     Write-Host "=======================================" -ForegroundColor Red
-    Write-Host "Build failed! Check the errors above." -ForegroundColor Red
+    Write-Host "Build failed!" -ForegroundColor Red
     Write-Host "=======================================" -ForegroundColor Red
 }
 

@@ -5,7 +5,7 @@ Write-Host "Testing ZKTeco Connection" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
-Set-Location $PSScriptRoot
+Set-Location "$PSScriptRoot/.."
 
 # Check if .env exists
 if (-not (Test-Path ".env")) {
@@ -20,7 +20,7 @@ if (-not (Test-Path ".env")) {
 Write-Host "Testing connection..." -ForegroundColor Yellow
 Write-Host ""
 
-docker run --rm --network host -v ${PWD}/.env:/app/.env:ro zkteco-attendance-sync:latest php artisan attendance:sync --test
+docker run --rm --network host -v ${PWD}/.env:/app/.env:ro attendance-sync-sync:latest php artisan attendance:sync --test
 
 Write-Host ""
 if ($LASTEXITCODE -eq 0) {

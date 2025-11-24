@@ -6,7 +6,7 @@ echo ZKTeco Docker Container Logs
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo Select log view option:
 echo.

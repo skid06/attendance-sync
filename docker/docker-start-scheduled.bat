@@ -6,7 +6,7 @@ echo Starting Scheduled ZKTeco Sync Container
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo Starting container...
 echo This will run sync every hour automatically.

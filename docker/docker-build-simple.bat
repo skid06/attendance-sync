@@ -1,15 +1,15 @@
 @echo off
-REM Build Docker image for ZKTeco Attendance Sync
+REM Build Docker image using simplified Dockerfile
 
 echo =======================================
-echo Building ZKTeco Attendance Docker Image
+echo Building with Simplified Dockerfile
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
-echo Building image...
-docker compose build
+echo Building image using Dockerfile.simple...
+docker build -f Dockerfile.simple -t attendance-sync-sync:latest .
 
 if %ERRORLEVEL% EQU 0 (
     echo.
@@ -17,10 +17,8 @@ if %ERRORLEVEL% EQU 0 (
     echo Build completed successfully!
     echo =======================================
     echo.
-    echo Next steps:
-    echo 1. Run: docker-test.bat to test connections
-    echo 2. Run: docker-sync.bat to sync manually
-    echo 3. Run: docker-start-scheduled.bat for automatic hourly sync
+    echo Note: This uses the simplified Dockerfile.
+    echo You can now use the normal docker scripts.
 ) else (
     echo.
     echo =======================================

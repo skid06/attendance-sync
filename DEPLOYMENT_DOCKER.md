@@ -1,6 +1,6 @@
-# Deploying ZKTeco Attendance Sync on Windows 11 with Docker
+# Deploying Attendance Sync on Windows 11 with Docker
 
-This guide will help you deploy the Laravel ZKTeco attendance application on Windows 11 using Docker Desktop.
+This guide will help you deploy the Laravel attendance sync application on Windows 11 using Docker Desktop.
 
 ## Why Docker?
 
@@ -45,7 +45,7 @@ Docker provides several advantages over traditional XAMPP deployment:
 
 1. **Navigate to your project directory:**
    ```cmd
-   cd C:\path\to\zkteco-attendance
+   cd C:\path\to\attendance-sync
    ```
 
 2. **Create or verify .env file:**
@@ -55,27 +55,28 @@ Docker provides several advantages over traditional XAMPP deployment:
 
 3. **Edit .env file** with your configuration:
    ```env
-   APP_NAME="ZKTeco Attendance"
+   APP_NAME="Attendance Sync"
    APP_ENV=production
    APP_DEBUG=false
 
-   # ZKTeco Device Configuration
-   ZKTECO_DEVICE_IP=192.168.1.201
-   ZKTECO_DEVICE_PORT=4370
+   # Attendance Device Configuration
+   ATTENDANCE_DRIVER=zkteco
+   ATTENDANCE_DEVICE_IP=192.168.1.201
+   ATTENDANCE_DEVICE_PORT=4370
 
    # Remote API Configuration
-   REMOTE_API_URL=https://your-server.com/api/v1
-   REMOTE_API_KEY=your-actual-api-key-here
-   REMOTE_API_TIMEOUT=30
+   ATTENDANCE_API_URL=https://your-server.com/api/v1
+   ATTENDANCE_API_KEY=your-actual-api-key-here
+   ATTENDANCE_API_TIMEOUT=30
 
    # Sync Settings
-   SYNC_BATCH_SIZE=100
-   AUTO_CLEAR_DEVICE=false
-   RETRY_FAILED_RECORDS=true
-   MAX_RETRIES=3
+   ATTENDANCE_SYNC_BATCH_SIZE=100
+   ATTENDANCE_AUTO_CLEAR=false
+   ATTENDANCE_RETRY_FAILED=true
+   ATTENDANCE_MAX_RETRIES=3
 
    # Debug Logging
-   ZKTECO_DEBUG_LOGGING=false
+   ATTENDANCE_DEBUG=false
    ```
 
 4. **Create required directories:**
@@ -100,21 +101,21 @@ This will:
 
 ### Step 3: Test the Connection
 
-Before running the sync, test the connection to your ZKTeco device and API:
+Before running the sync, test the connection to your device and API:
 
 ```cmd
-docker-compose run --rm zkteco-test
+docker-compose --profile test run --rm attendance-test
 ```
 
 Or manually:
 
 ```cmd
-docker-compose run --rm zkteco-sync php artisan attendance:sync --test
+docker-compose run --rm attendance-sync php artisan attendance:sync --test
 ```
 
 You should see:
 ```
-✅ ZKTeco device connection successful
+✅ Attendance device connection successful
 ✅ Remote API connection successful
 ```
 
@@ -123,19 +124,19 @@ You should see:
 Run a one-time sync manually:
 
 ```cmd
-docker-compose run --rm zkteco-sync php artisan attendance:sync
+docker-compose run --rm attendance-sync php artisan attendance:sync
 ```
 
 With auto-clear:
 
 ```cmd
-docker-compose run --rm zkteco-sync php artisan attendance:sync --clear
+docker-compose run --rm attendance-sync php artisan attendance:sync --clear
 ```
 
 Custom batch size:
 
 ```cmd
-docker-compose run --rm zkteco-sync php artisan attendance:sync --batch-size=50
+docker-compose run --rm attendance-sync php artisan attendance:sync --batch-size=50
 ```
 
 ## Automated Sync Options
@@ -146,25 +147,20 @@ You have several options for running the sync automatically:
 
 This approach uses Windows Task Scheduler to trigger Docker containers on a schedule.
 
-1. **Use the provided batch script** `docker-sync.bat`:
-   ```batch
-   @echo off
-   cd /d C:\path\to\zkteco-attendance
-   docker-compose run --rm zkteco-sync php artisan attendance:sync --clear >> storage\logs\docker-sync.log 2>&1
-   ```
+1. **Use the provided batch script** `docker/docker-sync.bat`
 
 2. **Create a scheduled task:**
    ```cmd
-   schtasks /create /tn "ZKTeco Docker Sync" /tr "C:\path\to\zkteco-attendance\docker-sync.bat" /sc hourly /st 09:00
+   schtasks /create /tn "Attendance Docker Sync" /tr "C:\path\to\attendance-sync\docker\docker-sync.bat" /sc hourly /st 09:00
    ```
 
 3. **Or use Task Scheduler GUI:**
    - Press `Win + R`, type `taskschd.msc`
    - Create Basic Task
-   - Name: `ZKTeco Docker Sync`
+   - Name: `Attendance Docker Sync`
    - Trigger: Daily, repeat every 1 hour
    - Action: Start a program
-   - Program: `C:\path\to\zkteco-attendance\docker-sync.bat`
+   - Program: `C:\path\to\attendance-sync\docker\docker-sync.bat`
 
 ### Option 2: Long-Running Scheduled Container
 
@@ -182,7 +178,7 @@ This will:
 
 To view logs:
 ```cmd
-docker-compose logs -f zkteco-sync-scheduled
+docker-compose logs -f attendance-sync-scheduled
 ```
 
 To stop:
@@ -218,13 +214,13 @@ docker ps -a
 
 ```cmd
 # View logs from scheduled service
-docker-compose logs -f zkteco-sync-scheduled
+docker-compose logs -f attendance-sync-scheduled
 
 # View logs from last run
-docker-compose logs zkteco-sync
+docker-compose logs attendance-sync
 
 # View last 100 lines
-docker-compose logs --tail=100 zkteco-sync
+docker-compose logs --tail=100 attendance-sync
 ```
 
 ### Stop Running Containers
@@ -254,51 +250,51 @@ docker-compose down --rmi all --volumes
 
 ## Batch Scripts for Easy Management
 
-We've provided several batch scripts for easy management on Windows:
+We've provided several batch scripts in the `docker/` folder for easy management on Windows:
 
-### `docker-build.bat` - Build the Docker image
+### `docker/docker-build.bat` - Build the Docker image
 ```cmd
-docker-build.bat
+docker\docker-build.bat
 ```
 
-### `docker-test.bat` - Test connections
+### `docker/docker-test.bat` - Test connections
 ```cmd
-docker-test.bat
+docker\docker-test.bat
 ```
 
-### `docker-sync.bat` - Run manual sync
+### `docker/docker-sync.bat` - Run manual sync
 ```cmd
-docker-sync.bat
+docker\docker-sync.bat
 ```
 
-### `docker-logs.bat` - View logs
+### `docker/docker-logs.bat` - View logs
 ```cmd
-docker-logs.bat
+docker\docker-logs.bat
 ```
 
-### `docker-start-scheduled.bat` - Start scheduled sync
+### `docker/docker-start-scheduled.bat` - Start scheduled sync
 ```cmd
-docker-start-scheduled.bat
+docker\docker-start-scheduled.bat
 ```
 
-### `docker-stop.bat` - Stop all containers
+### `docker/docker-stop.bat` - Stop all containers
 ```cmd
-docker-stop.bat
+docker\docker-stop.bat
 ```
 
 ## Network Configuration
 
-### Accessing ZKTeco Device on Local Network
+### Accessing Device on Local Network
 
 The Docker container uses `network_mode: host` which allows it to access devices on your local network directly. This means:
 
-- The container can reach your ZKTeco device at `192.168.1.201`
+- The container can reach your device at `192.168.1.201`
 - No port mapping is needed
 - The container uses your Windows host's network interface
 
 ### Firewall Configuration
 
-If you have issues connecting to the ZKTeco device:
+If you have issues connecting to the device:
 
 1. **Windows Defender Firewall:**
    - Allow Docker Desktop through firewall
@@ -340,7 +336,7 @@ Or use the standalone version:
 docker-compose version
 ```
 
-### Issue 3: Cannot connect to ZKTeco device
+### Issue 3: Cannot connect to attendance device
 
 **Solution:**
 1. Verify device IP in .env file
@@ -382,7 +378,7 @@ icacls database /grant Everyone:(OI)(CI)F /T
 3. Check database file exists: `database\database.sqlite`
 4. Run in foreground to see errors:
    ```cmd
-   docker-compose run --rm zkteco-sync php artisan attendance:sync
+   docker-compose run --rm attendance-sync php artisan attendance:sync
    ```
 
 ### Issue 7: Health check failing
@@ -390,7 +386,7 @@ icacls database /grant Everyone:(OI)(CI)F /T
 **Solution:**
 The health check runs `php artisan attendance:sync --test`. If failing:
 1. Check .env configuration
-2. Verify ZKTeco device is accessible
+2. Verify device is accessible
 3. Verify API endpoint is reachable
 4. Disable health check temporarily by commenting it out in docker-compose.yml
 
@@ -403,7 +399,7 @@ The health check runs `php artisan attendance:sync --test`. If failing:
 type storage\logs\laravel.log
 
 # View from container
-docker-compose exec zkteco-sync-scheduled cat storage/logs/laravel.log
+docker-compose exec attendance-sync-scheduled cat storage/logs/laravel.log
 ```
 
 ### Docker container logs
@@ -416,7 +412,7 @@ docker-compose logs -f
 docker-compose logs --tail=100
 
 # Logs from specific service
-docker-compose logs zkteco-sync-scheduled
+docker-compose logs attendance-sync-scheduled
 ```
 
 ## Production Deployment Checklist
@@ -425,10 +421,10 @@ Before deploying to production:
 
 - [ ] Set `APP_ENV=production` in `.env`
 - [ ] Set `APP_DEBUG=false` in `.env`
-- [ ] Configure correct `ZKTECO_DEVICE_IP`
-- [ ] Configure correct `REMOTE_API_URL` and `REMOTE_API_KEY`
-- [ ] Test connection: `docker-compose run --rm zkteco-test`
-- [ ] Test manual sync: `docker-compose run --rm zkteco-sync php artisan attendance:sync`
+- [ ] Configure correct `ATTENDANCE_DEVICE_IP`
+- [ ] Configure correct `ATTENDANCE_API_URL` and `ATTENDANCE_API_KEY`
+- [ ] Test connection: `docker-compose --profile test run --rm attendance-test`
+- [ ] Test manual sync: `docker-compose run --rm attendance-sync php artisan attendance:sync`
 - [ ] Set up automated sync (Task Scheduler or scheduled container)
 - [ ] Configure log rotation
 - [ ] Test scheduled sync runs successfully
@@ -488,62 +484,6 @@ copy backups\20241118\database.sqlite database\
 docker-compose --profile scheduled up -d
 ```
 
-## Performance Optimization
-
-### Reduce Image Size
-
-The Dockerfile uses multi-stage builds to create a smaller production image. To further optimize:
-
-1. Remove unnecessary PHP extensions
-2. Use Alpine Linux base image (requires more configuration)
-3. Minimize layers in Dockerfile
-
-### Improve Sync Performance
-
-1. Adjust batch size in .env: `SYNC_BATCH_SIZE=200`
-2. Enable debug logging temporarily to identify bottlenecks
-3. Monitor logs during sync to see timing
-
-## Security Best Practices
-
-1. **Keep .env file secure**
-   - Never commit to Git
-   - Set restrictive permissions: `icacls .env /grant:r %username%:F`
-
-2. **Use HTTPS for API endpoints**
-   - Always use `https://` in `REMOTE_API_URL`
-
-3. **Regular updates**
-   - Keep Docker Desktop updated
-   - Rebuild image periodically for security patches:
-     ```cmd
-     docker-compose build --pull --no-cache
-     ```
-
-4. **Limit container permissions**
-   - The Dockerfile runs as `www-data` user (non-root)
-   - Avoid running containers with `--privileged` flag
-
-5. **Network isolation (optional)**
-   - For enhanced security, use Docker networks instead of host mode
-   - Requires ZKTeco device to be accessible via Docker network
-
-## Migrating from XAMPP to Docker
-
-If you're currently using XAMPP deployment:
-
-1. **Stop XAMPP Task Scheduler tasks**
-2. **Backup your XAMPP database:**
-   ```cmd
-   copy C:\xampp\htdocs\zkteco-attendance\database\database.sqlite database\
-   ```
-3. **Copy logs:**
-   ```cmd
-   copy C:\xampp\htdocs\zkteco-attendance\storage\logs\* storage\logs\
-   ```
-4. **Follow Docker setup steps above**
-5. **Test thoroughly before removing XAMPP**
-
 ## Useful Commands Reference
 
 ```cmd
@@ -551,10 +491,10 @@ If you're currently using XAMPP deployment:
 docker-compose build
 
 # Test connection
-docker-compose run --rm zkteco-test
+docker-compose --profile test run --rm attendance-test
 
 # Manual sync
-docker-compose run --rm zkteco-sync php artisan attendance:sync
+docker-compose run --rm attendance-sync php artisan attendance:sync
 
 # Start scheduled sync (every hour)
 docker-compose --profile scheduled up -d
@@ -569,7 +509,7 @@ docker-compose logs -f
 docker-compose logs --tail=100
 
 # Execute command in running container
-docker-compose exec zkteco-sync-scheduled php artisan attendance:sync --test
+docker-compose exec attendance-sync-scheduled php artisan attendance:sync --test
 
 # Restart containers
 docker-compose restart
@@ -598,34 +538,9 @@ For Docker-specific issues:
 2. Check container logs: `docker-compose logs`
 3. Check application logs: `type storage\logs\laravel.log`
 4. Verify .env configuration
-5. Test network connectivity to ZKTeco device
+5. Test network connectivity to attendance device
 
 For application issues, refer to the main README.md.
-
-## Advantages of Docker Deployment
-
-| Feature | XAMPP | Docker |
-|---------|-------|--------|
-| **Installation** | Complex, multiple steps | Simple, one command |
-| **PHP Version** | Fixed, hard to change | Easily changeable |
-| **Dependencies** | Manual installation | Automated |
-| **Isolation** | Shares with system | Fully isolated |
-| **Portability** | Windows only | Any OS |
-| **Updates** | Manual | Rebuild image |
-| **Cleanup** | Difficult | One command |
-| **Production** | Not recommended | Production-ready |
-
-## Next Steps
-
-After successful deployment:
-
-1. Set up automated sync (Task Scheduler or scheduled container)
-2. Configure monitoring and alerting
-3. Set up log rotation
-4. Create backup automation
-5. Document your specific configuration
-6. Test failover scenarios
-7. Plan for updates and maintenance
 
 ---
 

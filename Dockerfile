@@ -1,4 +1,4 @@
-# Multi-stage build for ZKTeco Attendance Sync Application
+# Multi-stage build for Attendance Sync Application
 
 # Stage 1: Build stage with Composer
 FROM php:8.2-cli AS builder

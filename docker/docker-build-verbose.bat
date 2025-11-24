@@ -1,28 +1,27 @@
 @echo off
-REM Restart ZKTeco Docker containers
+REM Build Docker image with verbose output for debugging
 
 echo =======================================
-echo Restarting ZKTeco Docker Containers
+echo Building with Verbose Output
 echo =======================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
-echo Stopping containers...
-docker compose down
-
+echo Building image with detailed output...
 echo.
-echo Starting containers...
-docker compose --profile scheduled up -d
+
+docker compose build --progress=plain --no-cache
 
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo =======================================
-    echo Containers restarted successfully!
+    echo Build completed successfully!
     echo =======================================
 ) else (
+    echo.
     echo =======================================
-    echo Failed to restart containers!
+    echo Build failed! Review the output above for details.
     echo =======================================
 )
 

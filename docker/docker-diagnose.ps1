@@ -5,7 +5,7 @@ Write-Host "Docker Diagnostics" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
-Set-Location $PSScriptRoot
+Set-Location "$PSScriptRoot/.."
 
 # Check Docker is running
 Write-Host "1. Checking Docker installation..." -ForegroundColor Yellow
@@ -54,7 +54,7 @@ Write-Host "5. Attempting build with verbose output..." -ForegroundColor Yellow
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
-docker build --progress=plain --no-cache -t zkteco-attendance-sync:latest . 2>&1 | Tee-Object -FilePath "build.log"
+docker build --progress=plain --no-cache -t attendance-sync-sync:latest . 2>&1 | Tee-Object -FilePath "build.log"
 
 Write-Host ""
 Write-Host "=======================================" -ForegroundColor Cyan
