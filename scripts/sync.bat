@@ -1,11 +1,11 @@
 @echo off
-REM ZKTeco Attendance Sync - Quick Sync Script
+REM Attendance Sync Sync - Quick Sync Script
 REM Run this manually or via Windows Task Scheduler
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo ================================================
-echo ZKTeco Attendance Sync
+echo Attendance Sync Sync
 echo Started: %date% %time%
 echo ================================================
 

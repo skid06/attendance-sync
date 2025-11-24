@@ -3,7 +3,7 @@ REM Create Windows Scheduled Task for Automatic Sync
 REM This script must be run as Administrator
 
 echo ================================================
-echo Create Scheduled Task for ZKTeco Sync
+echo Create Scheduled Task for Attendance Sync
 echo ================================================
 echo.
 
@@ -23,7 +23,7 @@ set SYNC_SCRIPT=%SCRIPT_DIR%sync.bat
 echo This will create a scheduled task that runs every hour.
 echo.
 echo Configuration:
-echo - Task Name: ZKTeco Attendance Sync
+echo - Task Name: Attendance Sync Sync
 echo - Schedule: Every 1 hour
 echo - Script: %SYNC_SCRIPT%
 echo.
@@ -38,7 +38,7 @@ if /i not "%CONFIRM%"=="Y" (
 echo.
 echo Creating scheduled task...
 
-schtasks /create /tn "ZKTeco Attendance Sync" /tr "\"%SYNC_SCRIPT%\"" /sc hourly /st 09:00 /ru SYSTEM /f
+schtasks /create /tn "Attendance Sync Sync" /tr "\"%SYNC_SCRIPT%\"" /sc hourly /st 09:00 /ru SYSTEM /f
 
 if %errorLevel% equ 0 (
     echo.
@@ -48,11 +48,11 @@ if %errorLevel% equ 0 (
     echo.
     echo To modify the schedule:
     echo 1. Open Task Scheduler (Win + R, type: taskschd.msc)
-    echo 2. Find "ZKTeco Attendance Sync" in the task list
+    echo 2. Find "Attendance Sync Sync" in the task list
     echo 3. Right-click and select Properties
     echo.
     echo To test the task now, run:
-    echo schtasks /run /tn "ZKTeco Attendance Sync"
+    echo schtasks /run /tn "Attendance Sync Sync"
 ) else (
     echo.
     echo ERROR: Failed to create scheduled task.

@@ -1,6 +1,6 @@
-# Deploying ZKTeco Attendance Sync on Windows 11 with XAMPP
+# Deploying Attendance Sync on Windows 11 with XAMPP
 
-This guide will help you deploy the Laravel ZKTeco attendance application on Windows 11 using XAMPP.
+This guide will help you deploy the Laravel attendance sync application on Windows 11 using XAMPP.
 
 ## Prerequisites
 
@@ -40,11 +40,11 @@ This guide will help you deploy the Laravel ZKTeco attendance application on Win
 
 ### Step 2: Copy Project Files
 
-1. Copy your project to `C:\xampp\htdocs\zkteco-attendance`
+1. Copy your project to `C:\xampp\htdocs\attendance-sync`
 2. Or clone from git if you have it in a repository:
    ```cmd
    cd C:\xampp\htdocs
-   git clone <your-repo-url> zkteco-attendance
+   git clone <your-repo-url> attendance-sync
    ```
 
 ### Step 3: Install Dependencies
@@ -52,7 +52,7 @@ This guide will help you deploy the Laravel ZKTeco attendance application on Win
 1. Open Command Prompt as Administrator
 2. Navigate to project directory:
    ```cmd
-   cd C:\xampp\htdocs\zkteco-attendance
+   cd C:\xampp\htdocs\attendance-sync
    ```
 3. Install PHP dependencies:
    ```cmd
@@ -69,7 +69,7 @@ This guide will help you deploy the Laravel ZKTeco attendance application on Win
 2. Open `.env` in a text editor and configure:
 
    ```env
-   APP_NAME="ZKTeco Attendance"
+   APP_NAME="Attendance Sync"
    APP_ENV=production
    APP_DEBUG=false
    APP_URL=http://localhost
@@ -77,23 +77,24 @@ This guide will help you deploy the Laravel ZKTeco attendance application on Win
    # Database (SQLite - no changes needed)
    DB_CONNECTION=sqlite
 
-   # ZKTeco Device Configuration
-   ZKTECO_DEVICE_IP=192.168.1.201
-   ZKTECO_DEVICE_PORT=4370
+   # Attendance Device Configuration
+   ATTENDANCE_DRIVER=zkteco
+   ATTENDANCE_DEVICE_IP=192.168.1.201
+   ATTENDANCE_DEVICE_PORT=4370
 
    # Remote API Configuration
-   REMOTE_API_URL=https://your-server.com/api/v1
-   REMOTE_API_KEY=your-actual-api-key-here
-   REMOTE_API_TIMEOUT=30
+   ATTENDANCE_API_URL=https://your-server.com/api/v1
+   ATTENDANCE_API_KEY=your-actual-api-key-here
+   ATTENDANCE_API_TIMEOUT=30
 
    # Sync Settings
-   SYNC_BATCH_SIZE=100
-   AUTO_CLEAR_DEVICE=false
-   RETRY_FAILED_RECORDS=true
-   MAX_RETRIES=3
+   ATTENDANCE_SYNC_BATCH_SIZE=100
+   ATTENDANCE_AUTO_CLEAR=false
+   ATTENDANCE_RETRY_FAILED=true
+   ATTENDANCE_MAX_RETRIES=3
 
    # Debug Logging (set to true for troubleshooting)
-   ZKTECO_DEBUG_LOGGING=false
+   ATTENDANCE_DEBUG=false
    ```
 
 3. Generate application key:
@@ -115,14 +116,14 @@ This guide will help you deploy the Laravel ZKTeco attendance application on Win
 
 ### Step 6: Test the Connection
 
-1. Test ZKTeco device connection:
+1. Test device connection:
    ```cmd
    php artisan attendance:sync --test
    ```
 
 2. If successful, you should see:
    ```
-   ✅ ZKTeco device connection successful
+   ✅ Attendance device connection successful
    ✅ Remote API connection successful
    ```
 
@@ -145,8 +146,8 @@ To run the sync automatically on a schedule, use Windows Task Scheduler:
 3. Configure as follows:
 
    **General Tab:**
-   - Name: `ZKTeco Attendance Sync`
-   - Description: `Sync attendance data from ZKTeco device`
+   - Name: `Attendance Sync`
+   - Description: `Sync attendance data from device`
    - Run whether user is logged on or not: ☑
    - Run with highest privileges: ☑
 
@@ -163,7 +164,7 @@ To run the sync automatically on a schedule, use Windows Task Scheduler:
    - Action: `Start a program`
    - Program/script: `C:\xampp\php\php.exe`
    - Add arguments: `artisan attendance:sync --clear`
-   - Start in: `C:\xampp\htdocs\zkteco-attendance`
+   - Start in: `C:\xampp\htdocs\attendance-sync`
    - Click **OK**
 
    **Conditions Tab:**
@@ -180,38 +181,65 @@ To run the sync automatically on a schedule, use Windows Task Scheduler:
 
 ### Method 2: Using Command Line
 
-Create a batch file `C:\xampp\htdocs\zkteco-attendance\sync.bat`:
-
-```batch
-@echo off
-cd C:\xampp\htdocs\zkteco-attendance
-C:\xampp\php\php.exe artisan attendance:sync --clear >> storage\logs\sync.log 2>&1
-```
-
-Then create the scheduled task:
+Use the provided batch scripts in the `scripts/` folder:
 
 ```cmd
-schtasks /create /tn "ZKTeco Attendance Sync" /tr "C:\xampp\htdocs\zkteco-attendance\sync.bat" /sc hourly /st 09:00
+scripts\create-scheduled-task.bat
+```
+
+Or manually create a scheduled task:
+
+```cmd
+schtasks /create /tn "Attendance Sync" /tr "C:\xampp\htdocs\attendance-sync\scripts\sync.bat" /sc hourly /st 09:00
 ```
 
 To view the task:
 ```cmd
-schtasks /query /tn "ZKTeco Attendance Sync"
+schtasks /query /tn "Attendance Sync"
 ```
 
 To run manually:
 ```cmd
-schtasks /run /tn "ZKTeco Attendance Sync"
+schtasks /run /tn "Attendance Sync"
 ```
 
 To delete the task:
 ```cmd
-schtasks /delete /tn "ZKTeco Attendance Sync"
+schtasks /delete /tn "Attendance Sync"
+```
+
+## Batch Scripts for Easy Management
+
+We've provided batch scripts in the `scripts/` folder:
+
+### `scripts/sync.bat` - Run Sync
+```cmd
+scripts\sync.bat
+```
+
+### `scripts/test-connection.bat` - Test Connection
+```cmd
+scripts\test-connection.bat
+```
+
+### `scripts/view-logs.bat` - View Logs
+```cmd
+scripts\view-logs.bat
+```
+
+### `scripts/windows-setup.bat` - Initial Setup
+```cmd
+scripts\windows-setup.bat
+```
+
+### `scripts/create-scheduled-task.bat` - Create Scheduled Task
+```cmd
+scripts\create-scheduled-task.bat
 ```
 
 ## Network Configuration
 
-### Ensure Network Access to ZKTeco Device
+### Ensure Network Access to Device
 
 1. **Test Network Connectivity:**
    ```cmd
@@ -236,7 +264,7 @@ schtasks /delete /tn "ZKTeco Attendance Sync"
    - Protocol: **UDP**, Specific remote ports: **4370**
    - Action: **Allow the connection**
    - Profile: Check all (Domain, Private, Public)
-   - Name: `ZKTeco Device Access`
+   - Name: `Attendance Device Access`
    - Click Finish
 
 ## Troubleshooting
@@ -304,67 +332,13 @@ mkdir storage\framework\views
 echo. > storage\logs\laravel.log
 ```
 
-## Running as a Windows Service (Optional)
-
-For production environments, you may want to run this as a Windows Service:
-
-### Using NSSM (Non-Sucking Service Manager)
-
-1. Download NSSM from [https://nssm.cc/download](https://nssm.cc/download)
-2. Extract `nssm.exe` to `C:\xampp\nssm\`
-3. Open Command Prompt as Administrator:
-
-```cmd
-cd C:\xampp\nssm
-nssm install ZKTecoSync
-```
-
-4. In the NSSM GUI:
-   - **Application Tab:**
-     - Path: `C:\xampp\php\php.exe`
-     - Startup directory: `C:\xampp\htdocs\zkteco-attendance`
-     - Arguments: `artisan attendance:sync --clear`
-
-   - **Details Tab:**
-     - Display name: `ZKTeco Attendance Sync Service`
-     - Description: `Syncs attendance data from ZKTeco device`
-
-   - **Log on Tab:**
-     - Log on as: `Local System account`
-
-5. Click **Install service**
-
-6. Set service to run every hour by combining with Task Scheduler
-
-## Monitoring
-
-### Create a monitoring batch file
-
-Create `C:\xampp\htdocs\zkteco-attendance\check-status.bat`:
-
-```batch
-@echo off
-echo ================================
-echo ZKTeco Sync Status
-echo ================================
-echo.
-echo Last 10 log entries:
-echo --------------------------------
-powershell -command "Get-Content storage\logs\laravel.log -Tail 10"
-echo.
-echo ================================
-pause
-```
-
-Double-click to view recent logs quickly.
-
 ## Backup
 
-Create a backup batch file `C:\xampp\htdocs\zkteco-attendance\backup.bat`:
+Create a backup batch file:
 
 ```batch
 @echo off
-set BACKUP_DIR=C:\ZKTeco-Backups
+set BACKUP_DIR=C:\Attendance-Backups
 set DATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
 set TIME=%time:~0,2%%time:~3,2%
 set BACKUP_FILE=%BACKUP_DIR%\backup_%DATE%_%TIME%.zip
@@ -383,8 +357,8 @@ Before going live:
 
 - [ ] Set `APP_ENV=production` in `.env`
 - [ ] Set `APP_DEBUG=false` in `.env`
-- [ ] Set correct `ZKTECO_DEVICE_IP`
-- [ ] Set correct `REMOTE_API_URL` and `REMOTE_API_KEY`
+- [ ] Set correct `ATTENDANCE_DEVICE_IP`
+- [ ] Set correct `ATTENDANCE_API_URL` and `ATTENDANCE_API_KEY`
 - [ ] Test device connection: `php artisan attendance:sync --test`
 - [ ] Test manual sync: `php artisan attendance:sync`
 - [ ] Configure Windows Task Scheduler

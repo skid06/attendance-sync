@@ -2,7 +2,7 @@
 REM View Application Logs
 REM Opens the log file in Notepad
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 if exist storage\logs\laravel.log (
     notepad storage\logs\laravel.log

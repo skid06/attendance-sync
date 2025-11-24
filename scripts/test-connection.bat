@@ -1,11 +1,11 @@
 @echo off
-REM ZKTeco Connection Test
+REM Attendance Connection Test
 REM Use this to quickly test if the device is accessible
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo ================================================
-echo ZKTeco Connection Test
+echo Attendance Connection Test
 echo ================================================
 echo.
 

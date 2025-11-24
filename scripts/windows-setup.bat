@@ -1,9 +1,9 @@
 @echo off
-REM ZKTeco Attendance Sync - Windows Setup Script
+REM Attendance Sync Sync - Windows Setup Script
 REM This script helps automate the initial setup on Windows
 
 echo ================================================
-echo ZKTeco Attendance Sync - Windows Setup
+echo Attendance Sync Sync - Windows Setup
 echo ================================================
 echo.
 
@@ -76,9 +76,9 @@ echo ================================================
 echo.
 echo NEXT STEPS:
 echo 1. Edit .env file and configure:
-echo    - ZKTECO_DEVICE_IP (your device IP address)
-echo    - REMOTE_API_URL (your server URL)
-echo    - REMOTE_API_KEY (your API key)
+echo    - ATTENDANCE_DEVICE_IP (your device IP address)
+echo    - ATTENDANCE_API_URL (your server URL)
+echo    - ATTENDANCE_API_KEY (your API key)
 echo.
 echo 2. Test the connection:
 echo    php artisan attendance:sync --test
