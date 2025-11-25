@@ -43,6 +43,19 @@ return [
             'transaction_mode' => 'DEFERRED',
         ],
 
+        'local_attendance' => [
+            'driver' => env('LOCAL_DB_DRIVER', 'mysql'),
+            'host' => env('LOCAL_DB_HOST', '127.0.0.1'),
+            'port' => env('LOCAL_DB_PORT', '3306'),
+            'database' => env('LOCAL_DB_DATABASE', 'attendance'),
+            'username' => env('LOCAL_DB_USERNAME', 'root'),
+            'password' => env('LOCAL_DB_PASSWORD', ''),
+            'charset' => env('LOCAL_DB_CHARSET', 'utf8mb4'),
+            'collation' => env('LOCAL_DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'strict' => true,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),

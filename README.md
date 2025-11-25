@@ -34,7 +34,8 @@ Choose the deployment method that best suits your needs:
 
 ## Supported Devices
 
-- **ZKTeco** - Biometric attendance devices (default)
+- **ZKTeco** - Biometric attendance devices via TCP/IP connection
+- **Dahua** - Reads attendance data from local database (for Dahua devices that log to database)
 - **Null** - Testing driver (no actual device connection)
 
 ## Requirements
@@ -58,12 +59,31 @@ php artisan key:generate
 
 Update the `.env` file with your device details:
 
+**For ZKTeco devices:**
 ```env
 # Attendance Device Configuration
-# Supported drivers: zkteco, null (for testing)
 ATTENDANCE_DRIVER=zkteco
 ATTENDANCE_DEVICE_IP=192.168.1.201    # Your device IP address
 ATTENDANCE_DEVICE_PORT=4370           # Default ZKTeco port
+```
+
+**For Dahua devices (database-based):**
+```env
+# Attendance Device Configuration
+ATTENDANCE_DRIVER=dahua
+
+# Dahua Device Configuration (reads from local database)
+DAHUA_DB_CONNECTION=local_attendance
+DAHUA_DB_TABLE=attendance_records
+DAHUA_FETCH_MINUTES=10                # Fetch last N minutes of data
+
+# Local Attendance Database
+LOCAL_DB_DRIVER=mysql
+LOCAL_DB_HOST=127.0.0.1
+LOCAL_DB_PORT=3306
+LOCAL_DB_DATABASE=attendance
+LOCAL_DB_USERNAME=root
+LOCAL_DB_PASSWORD=
 ```
 
 ### 2. Configure Remote API

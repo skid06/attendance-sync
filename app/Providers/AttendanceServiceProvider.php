@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\AttendanceDeviceInterface;
 use App\Services\AttendanceSyncService;
+use App\Services\Devices\DahuaDevice;
 use App\Services\Devices\NullDevice;
 use App\Services\Devices\ZKTecoDevice;
 use Illuminate\Support\ServiceProvider;
@@ -49,6 +50,7 @@ class AttendanceServiceProvider extends ServiceProvider
                 $config['ip'],
                 $config['port'] ?? 4370
             ),
+            'dahua' => new DahuaDevice($config),
             'null' => new NullDevice(),
             default => throw new InvalidArgumentException("Unsupported attendance device driver: {$driver}"),
         };

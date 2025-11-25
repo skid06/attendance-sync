@@ -35,6 +35,13 @@ return [
             'port' => env('ATTENDANCE_DEVICE_PORT', 4370),
         ],
 
+        'dahua' => [
+            'driver' => 'dahua',
+            'connection' => env('DAHUA_DB_CONNECTION', 'local_attendance'),
+            'table' => env('DAHUA_DB_TABLE', 'attendance_records'),
+            'fetch_minutes' => env('DAHUA_FETCH_MINUTES', 10),
+        ],
+
         'null' => [
             'driver' => 'null',
         ],
