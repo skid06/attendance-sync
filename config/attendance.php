@@ -11,11 +11,11 @@ return [
     | used to connect and fetch attendance records. You may set this to any
     | of the drivers defined in the "devices" array below.
     |
-    | Supported: "zkteco", "null" (for testing)
+    | Supported: "zkteco", "dahua", "null" (for testing)
     |
     */
 
-    'default' => env('ATTENDANCE_DRIVER', 'zkteco'),
+    'default' => env('ATTENDANCE_DRIVER', 'dahua'),
 
     /*
     |--------------------------------------------------------------------------
