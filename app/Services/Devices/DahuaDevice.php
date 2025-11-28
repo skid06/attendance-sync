@@ -148,7 +148,7 @@ class DahuaDevice implements AttendanceDeviceInterface
                 // Additional Dahua-specific fields
                 'person_id' => $record['PersonID'] ?? null,
                 'person_name' => $record['PersonName'] ?? null,
-                'person_card_no' => $record['PersonCardNo'] ?? null,
+                'person_card_no' => $record['PerSonCardNo'] ?? null,
                 'attendance_datetime' => $record['AttendanceDateTime'] ?? null,
                 'attendance_state' => $record['AttendanceState'] ?? null,
                 'attendance_method' => $record['AttendanceMethod'] ?? null,
