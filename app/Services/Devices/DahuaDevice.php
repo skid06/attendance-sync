@@ -48,7 +48,7 @@ class DahuaDevice implements AttendanceDeviceInterface
     }
 
     /**
-     * Get attendance records from local database (last N minutes based on epoch)
+     * Get attendance records from local database (last N minutes based on AttendanceDateTime epoch)
      */
     public function getAttendance(): array
     {
@@ -57,8 +57,8 @@ class DahuaDevice implements AttendanceDeviceInterface
 
             $rawRecords = DB::connection($this->connection)
                 ->table($this->table)
-                ->where('epoch', '>=', $epochThreshold)
-                ->orderBy('epoch', 'desc')
+                ->where('AttendanceDateTime', '>=', $epochThreshold)
+                ->orderBy('AttendanceDateTime', 'desc')
                 ->get();
 
             Log::info("Retrieved {count} records from Dahua database (last {minutes} minutes)", [
@@ -100,7 +100,7 @@ class DahuaDevice implements AttendanceDeviceInterface
         try {
             $latestRecord = DB::connection($this->connection)
                 ->table($this->table)
-                ->orderBy('epoch', 'desc')
+                ->orderBy('AttendanceDateTime', 'desc')
                 ->first();
 
             return [
@@ -109,9 +109,9 @@ class DahuaDevice implements AttendanceDeviceInterface
                 'table' => $this->table,
                 'fetch_minutes' => $this->fetchMinutes,
                 'connected' => $this->connected,
-                'latest_epoch' => $latestRecord->epoch ?? null,
-                'latest_time' => $latestRecord->epoch
-                    ? date('Y-m-d H:i:s', $latestRecord->epoch)
+                'latest_epoch' => $latestRecord->AttendanceDateTime ?? null,
+                'latest_time' => $latestRecord->AttendanceDateTime
+                    ? date('Y-m-d H:i:s', $latestRecord->AttendanceDateTime)
                     : null,
             ];
         } catch (Exception $e) {
@@ -136,13 +136,13 @@ class DahuaDevice implements AttendanceDeviceInterface
             $record = (array) $record;
 
             $transformed[] = [
-                'user_id' => $record['user_id'] ?? $record['UserID'] ?? 'Unknown',
-                'timestamp' => isset($record['epoch'])
-                    ? date('Y-m-d H:i:s', $record['epoch'])
-                    : ($record['timestamp'] ?? date('Y-m-d H:i:s')),
+                'user_id' => $record['PersonID'] ?? $record['user_id'] ?? 'Unknown',
+                'timestamp' => isset($record['AttendanceDateTime']) && $record['AttendanceDateTime'] > 0
+                    ? date('Y-m-d H:i:s', $record['AttendanceDateTime'])
+                    : ($record['AttendanceTime'] ?? date('Y-m-d H:i:s')),
                 'verify_type' => $this->getVerifyTypeName($record['verify_type'] ?? $record['VerifyType'] ?? 0),
                 'status' => $this->getStatusName($record['status'] ?? $record['InOutState'] ?? 0),
-                'raw_timestamp' => $record['epoch'] ?? strtotime($record['timestamp'] ?? 'now'),
+                'raw_timestamp' => $record['AttendanceDateTime'] ?? strtotime($record['AttendanceTime'] ?? 'now'),
             ];
         }
 
