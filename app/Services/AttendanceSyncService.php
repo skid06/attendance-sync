@@ -142,7 +142,7 @@ class AttendanceSyncService
                     'Authorization' => 'Bearer ' . $this->apiKey,
                     'Accept' => 'application/json',
                 ])
-                ->get($this->baseUrl . '/health');
+                ->get($this->baseUrl);
 
             if ($response->successful()) {
                 Log::info("Remote API connection test successful");
