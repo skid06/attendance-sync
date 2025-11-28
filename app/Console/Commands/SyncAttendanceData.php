@@ -77,13 +77,6 @@ class SyncAttendanceData extends Command
             // Display sample records
             $this->displaySampleRecords($records);
 
-            // Confirm before sending
-            if (!$this->confirm('Do you want to send these records to the remote server?', true)) {
-                $this->warn('Sync cancelled by user');
-                $this->device->disconnect();
-                return Command::SUCCESS;
-            }
-
             // Send to remote server
             $this->info('Sending attendance records to remote server...');
             $batchSize = (int) $this->option('batch-size');
