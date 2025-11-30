@@ -53,7 +53,8 @@ class DahuaDevice implements AttendanceDeviceInterface
     public function getAttendance(): array
     {
         try {
-            $epochThreshold = now()->subMinutes($this->fetchMinutes)->timestamp;
+            // Convert to milliseconds since Dahua stores timestamps in milliseconds
+            $epochThreshold = now()->subMinutes($this->fetchMinutes)->timestamp * 1000;
 
             $rawRecords = DB::connection($this->connection)
                 ->table($this->table)
@@ -111,7 +112,7 @@ class DahuaDevice implements AttendanceDeviceInterface
                 'connected' => $this->connected,
                 'latest_epoch' => $latestRecord->AttendanceDateTime ?? null,
                 'latest_time' => $latestRecord->AttendanceDateTime
-                    ? date('Y-m-d H:i:s', $latestRecord->AttendanceDateTime)
+                    ? date('Y-m-d H:i:s', $latestRecord->AttendanceDateTime / 1000)  // Convert milliseconds to seconds
                     : null,
             ];
         } catch (Exception $e) {
@@ -139,11 +140,13 @@ class DahuaDevice implements AttendanceDeviceInterface
                 // Standardized fields
                 'user_id' => $record['PersonID'] ?? $record['user_id'] ?? 'Unknown',
                 'timestamp' => isset($record['AttendanceDateTime']) && $record['AttendanceDateTime'] > 0
-                    ? date('Y-m-d H:i:s', $record['AttendanceDateTime'])
+                    ? date('Y-m-d H:i:s', $record['AttendanceDateTime'] / 1000)  // Convert milliseconds to seconds
                     : ($record['AttendanceTime'] ?? date('Y-m-d H:i:s')),
                 'verify_type' => $this->getVerifyTypeName($record['AttendanceMethod'] ?? $record['verify_type'] ?? 0),
                 'status' => $this->getStatusName($record['AttendanceState'] ?? $record['status'] ?? 0),
-                'raw_timestamp' => $record['AttendanceDateTime'] ?? strtotime($record['AttendanceTime'] ?? 'now'),
+                'raw_timestamp' => isset($record['AttendanceDateTime'])
+                    ? intval($record['AttendanceDateTime'] / 1000)  // Convert milliseconds to seconds
+                    : strtotime($record['AttendanceTime'] ?? 'now'),
 
                 // Additional Dahua-specific fields
                 'person_id' => $record['PersonID'] ?? null,
