@@ -7,6 +7,9 @@
  * from the console application and logs it to a file.
  */
 
+// Set timezone to Brisbane
+date_default_timezone_set('Australia/Brisbane');
+
 // Configuration
 define('LOG_DIR', dirname(__FILE__) . '/logs');
 define('LOG_FILE', LOG_DIR . '/attendance-' . date('Y-m-d') . '.log');

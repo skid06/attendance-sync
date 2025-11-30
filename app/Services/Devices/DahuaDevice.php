@@ -56,6 +56,12 @@ class DahuaDevice implements AttendanceDeviceInterface
             // Convert to milliseconds since Dahua stores timestamps in milliseconds
             $epochThreshold = now()->subMinutes($this->fetchMinutes)->timestamp * 1000;
 
+            Log::info("Querying Dahua database", [
+                'threshold_ms' => $epochThreshold,
+                'threshold_readable' => date('Y-m-d H:i:s', $epochThreshold / 1000),
+                'fetch_minutes' => $this->fetchMinutes,
+            ]);
+
             $rawRecords = DB::connection($this->connection)
                 ->table($this->table)
                 ->where('AttendanceDateTime', '>=', $epochThreshold)
