@@ -15,9 +15,37 @@ define('LOG_DIR', dirname(__FILE__) . '/logs');
 define('LOG_FILE', LOG_DIR . '/attendance-' . date('Y-m-d') . '.log');
 define('API_KEY', '57f6a5c35acc14c5111cad9dda7c8ce4e10875db542653dcf08be15042ea4414'); // Change this to match your .env ATTENDANCE_API_KEY
 
+// Database Configuration
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'attendance');
+define('DB_TABLE', 'attendance_records');
+
 // Create logs directory if it doesn't exist
 if (!is_dir(LOG_DIR)) {
     mkdir(LOG_DIR, 0755, true);
+}
+
+// Database connection
+$db = null;
+function getDbConnection() {
+    global $db;
+    if ($db === null) {
+        $db = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        if (!$db) {
+            logData('ERROR: Database connection failed', array(
+                'error' => mysqli_connect_error()
+            ));
+            sendJsonResponse(array(
+                'success' => false,
+                'message' => 'Database connection failed'
+            ), 500);
+        }
+        // Set charset to UTF-8
+        mysqli_set_charset($db, 'utf8');
+    }
+    return $db;
 }
 
 // Helper function to send JSON response
@@ -138,11 +166,66 @@ if ($method === 'GET') {
         'raw_data' => $data
     ));
 
+    // Save records to database
+    $db = getDbConnection();
+    $savedCount = 0;
+    $failedCount = 0;
+    $errors = array();
+
+    foreach ($records as $record) {
+        // Extract fields
+        $userId = isset($record['user_id']) ? $record['user_id'] : '';
+        $timestamp = isset($record['timestamp']) ? $record['timestamp'] : date('Y-m-d H:i:s');
+        $verifyType = isset($record['verify_type']) ? $record['verify_type'] : '';
+        $status = isset($record['status']) ? $record['status'] : '';
+        $rawTimestamp = isset($record['raw_timestamp']) ? intval($record['raw_timestamp']) : 0;
+
+        // Device info
+        $deviceType = isset($deviceInfo['type']) ? $deviceInfo['type'] : '';
+        $deviceIp = isset($deviceInfo['ip']) ? $deviceInfo['ip'] : '';
+        $syncedAt = isset($deviceInfo['synced_at']) ? $deviceInfo['synced_at'] : date('Y-m-d H:i:s');
+
+        // Build INSERT query
+        $query = sprintf(
+            "INSERT INTO %s (user_id, timestamp, verify_type, status, raw_timestamp, device_type, device_ip, synced_at, created_at) VALUES ('%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s')",
+            DB_TABLE,
+            mysqli_real_escape_string($db, $userId),
+            mysqli_real_escape_string($db, $timestamp),
+            mysqli_real_escape_string($db, $verifyType),
+            mysqli_real_escape_string($db, $status),
+            $rawTimestamp,
+            mysqli_real_escape_string($db, $deviceType),
+            mysqli_real_escape_string($db, $deviceIp),
+            mysqli_real_escape_string($db, $syncedAt),
+            date('Y-m-d H:i:s')
+        );
+
+        if (mysqli_query($db, $query)) {
+            $savedCount++;
+        } else {
+            $failedCount++;
+            $errors[] = array(
+                'user_id' => $userId,
+                'error' => mysqli_error($db)
+            );
+        }
+    }
+
+    // Log the result
+    logData('DATABASE SAVE RESULT', array(
+        'total_records' => count($records),
+        'saved' => $savedCount,
+        'failed' => $failedCount,
+        'errors' => $errors
+    ));
+
     // Send success response
     sendJsonResponse(array(
-        'success' => true,
-        'message' => 'Records saved successfully',
+        'success' => $failedCount === 0,
+        'message' => $savedCount . ' records saved successfully' . ($failedCount > 0 ? ', ' . $failedCount . ' failed' : ''),
         'records_received' => count($records),
+        'records_saved' => $savedCount,
+        'records_failed' => $failedCount,
         'timestamp' => date('c')
     ));
 
