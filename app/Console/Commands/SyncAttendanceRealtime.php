@@ -115,16 +115,15 @@ class SyncAttendanceRealtime extends Command
                 $loopCount++;
 
                 try {
-                    $this->comment("[" . date('Y-m-d H:i:s') . "] Checking for new records... (Loop #{$loopCount})");
-
                     // Get new records since last sync
                     $records = $this->getNewRecords($lastSync);
 
                     if (empty($records)) {
-                        $this->line("   No new records found");
+                        // Silently continue - no output for empty checks
                     } else {
                         $count = count($records);
-                        $this->info("   ✨ Found {$count} new record(s)! Syncing...");
+                        $this->newLine();
+                        $this->info("[" . date('Y-m-d H:i:s') . "] ✨ Found {$count} new record(s)! Syncing...");
 
                         // Sync the records
                         $result = $this->syncService->sendAttendanceRecordsInBatches(
