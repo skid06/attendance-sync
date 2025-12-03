@@ -83,6 +83,40 @@ class DahuaDevice implements AttendanceDeviceInterface
     }
 
     /**
+     * Get attendance records since a specific timestamp (for real-time sync)
+     */
+    public function getAttendanceSince(int $unixTimestamp): array
+    {
+        try {
+            // Convert Unix timestamp (seconds) to milliseconds
+            $epochThreshold = $unixTimestamp * 1000;
+
+            Log::info("Querying Dahua database for records since timestamp", [
+                'threshold_ms' => $epochThreshold,
+                'threshold_readable' => date('Y-m-d H:i:s', $unixTimestamp),
+                'unix_timestamp' => $unixTimestamp,
+            ]);
+
+            $rawRecords = DB::connection($this->connection)
+                ->table($this->table)
+                ->where('AttendanceDateTime', '>', $epochThreshold)
+                ->orderBy('AttendanceDateTime', 'asc')
+                ->get();
+
+            Log::info("Retrieved {count} new records from Dahua database", [
+                'count' => $rawRecords->count(),
+                'since' => date('Y-m-d H:i:s', $unixTimestamp),
+            ]);
+
+            return $this->transformAttendanceData($rawRecords->toArray());
+
+        } catch (Exception $e) {
+            Log::error("Error getting attendance since timestamp from Dahua database: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Clear attendance (not applicable for Dahua - data managed externally)
      */
     public function clearAttendance(): bool

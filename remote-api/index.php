@@ -16,11 +16,15 @@ define('LOG_FILE', LOG_DIR . '/attendance-' . date('Y-m-d') . '.log');
 define('API_KEY', '57f6a5c35acc14c5111cad9dda7c8ce4e10875db542653dcf08be15042ea4414'); // Change this to match your .env ATTENDANCE_API_KEY
 
 // Database Configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'attendance');
+define('DB_HOST', 'sunengim.c8hksybtlsnc.ap-southeast-2.rds.amazonaws.com');
+define('DB_USER', 'imsunengdb');
+define('DB_PASS', 'e1vA8W!$IPB^#XXH9E7UjUIj^jG*Ku0m');
+define('DB_NAME', 'imsuneng_rds…');
 define('DB_TABLE', 'attendance_records');
+// define('IM_DB_HOST','sunengim.c8hksybtlsnc.ap-southeast-2.rds.amazonaws.com');
+// define('IM_DB_USERNAME','imsunengdb');
+// define('IM_DB_DATABASE','imsuneng_rds');
+// define('IM_DB_PASSWORD','e1vA8W!$IPB^#XXH9E7UjUIj^jG*Ku0m');
 
 // Create logs directory if it doesn't exist
 if (!is_dir(LOG_DIR)) {
