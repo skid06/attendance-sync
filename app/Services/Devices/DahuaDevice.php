@@ -68,11 +68,14 @@ class DahuaDevice implements AttendanceDeviceInterface
                 ->orderBy('AttendanceDateTime', 'desc')
                 ->get();
 
-            Log::info("Retrieved {count} records from Dahua database (last {minutes} minutes)", [
-                'count' => $rawRecords->count(),
-                'minutes' => $this->fetchMinutes,
-                'threshold' => $epochThreshold,
-            ]);
+            // Only log when records are found
+            if ($rawRecords->count() > 0) {
+                Log::info("Retrieved {count} records from Dahua database (last {minutes} minutes)", [
+                    'count' => $rawRecords->count(),
+                    'minutes' => $this->fetchMinutes,
+                    'threshold' => $epochThreshold,
+                ]);
+            }
 
             return $this->transformAttendanceData($rawRecords->toArray());
 
@@ -91,22 +94,19 @@ class DahuaDevice implements AttendanceDeviceInterface
             // Convert Unix timestamp (seconds) to milliseconds
             $epochThreshold = $unixTimestamp * 1000;
 
-            Log::info("Querying Dahua database for records since timestamp", [
-                'threshold_ms' => $epochThreshold,
-                'threshold_readable' => date('Y-m-d H:i:s', $unixTimestamp),
-                'unix_timestamp' => $unixTimestamp,
-            ]);
-
             $rawRecords = DB::connection($this->connection)
                 ->table($this->table)
                 ->where('AttendanceDateTime', '>', $epochThreshold)
                 ->orderBy('AttendanceDateTime', 'asc')
                 ->get();
 
-            Log::info("Retrieved {count} new records from Dahua database", [
-                'count' => $rawRecords->count(),
-                'since' => date('Y-m-d H:i:s', $unixTimestamp),
-            ]);
+            // Only log when records are found
+            if ($rawRecords->count() > 0) {
+                Log::info("Retrieved {count} new records from Dahua database", [
+                    'count' => $rawRecords->count(),
+                    'since' => date('Y-m-d H:i:s', $unixTimestamp),
+                ]);
+            }
 
             return $this->transformAttendanceData($rawRecords->toArray());
 
