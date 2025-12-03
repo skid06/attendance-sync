@@ -179,6 +179,7 @@ if ($method === 'GET') {
     foreach ($records as $record) {
         // Extract fields
         $userId = isset($record['user_id']) ? $record['user_id'] : '';
+        $personCardNo = isset($record['person_card_no']) ? $record['person_card_no'] : '';
         $timestamp = isset($record['timestamp']) ? $record['timestamp'] : date('Y-m-d H:i:s');
         $verifyType = isset($record['verify_type']) ? $record['verify_type'] : '';
         $status = isset($record['status']) ? $record['status'] : '';
@@ -191,9 +192,10 @@ if ($method === 'GET') {
 
         // Build INSERT query
         $query = sprintf(
-            "INSERT INTO %s (user_id, timestamp, verify_type, status, raw_timestamp, device_type, device_ip, synced_at, created_at) VALUES ('%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s')",
+            "INSERT INTO %s (user_id, person_card_no, timestamp, verify_type, status, raw_timestamp, device_type, device_ip, synced_at, created_at) VALUES ('%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s')",
             DB_TABLE,
             mysqli_real_escape_string($db, $userId),
+            mysqli_real_escape_string($db, $personCardNo),
             mysqli_real_escape_string($db, $timestamp),
             mysqli_real_escape_string($db, $verifyType),
             mysqli_real_escape_string($db, $status),
@@ -213,6 +215,101 @@ if ($method === 'GET') {
                 'error' => mysqli_error($db)
             );
         }
+
+        // ========================================================================
+        // EMPLOYEE TIMESHEET INTEGRATION (COMMENTED OUT - VERIFY BEFORE ENABLING)
+        // ========================================================================
+        // Uncomment the code below after verifying it matches your database structure
+        /*
+        // Process employee timesheet (clock in/out logic)
+        // $code is mapped from PerSonCardNo field (person_card_no in our records)
+        $code = isset($record['person_card_no']) ? $record['person_card_no'] : '';
+
+        if (!empty($code)) {
+            // Convert timestamp to separate date and time for compatibility
+            $recdate = date('Y-m-d', $rawTimestamp);
+            $rectime = date('H:i:s', $rawTimestamp);
+
+            // FIND EMPLOYEE by RFID tag (using PerSonCardNo)
+            $employee_query = sprintf(
+                "SELECT id FROM employees WHERE rfid_tag='%s' AND LENGTH(rfid_tag)>2",
+                mysqli_real_escape_string($db, $code)
+            );
+            $employee = mysqli_query($db, $employee_query);
+
+            if (mysqli_num_rows($employee) == 1) {
+                $employee_id = mysqli_fetch_assoc($employee)['id'];
+
+                // Check if there's an existing open timesheet entry
+                $office_time_entry_query = sprintf(
+                    "SELECT id FROM timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s'",
+                    mysqli_real_escape_string($db, $employee_id)
+                );
+                $office_time_entry = mysqli_query($db, $office_time_entry_query);
+
+                if (mysqli_num_rows($office_time_entry) > 0) {
+                    // THERE'S AN EXISTING OPEN SLOT - CLOSE IT OUT (Clock Out)
+                    $timesheet_id = mysqli_fetch_assoc($office_time_entry)['id'];
+                    $update_query = sprintf(
+                        "UPDATE timesheets_office_staff SET time_out = '%s %s', out_activity = '8', comment='Scanned Out' WHERE id = '%s'",
+                        mysqli_real_escape_string($db, $recdate),
+                        mysqli_real_escape_string($db, $rectime),
+                        mysqli_real_escape_string($db, $timesheet_id)
+                    );
+                    mysqli_query($db, $update_query);
+
+                    logData('TIMESHEET: Clock Out', array(
+                        'employee_id' => $employee_id,
+                        'timesheet_id' => $timesheet_id,
+                        'time_out' => $recdate . ' ' . $rectime,
+                        'code' => $code
+                    ));
+
+                } else {
+                    // CREATE A NEW RECORD (Clock In)
+
+                    // GET THE SITE ID OF THE READER/DEVICE
+                    // Note: You'll need to map device_ip to your avea_units table
+                    $site_id_query = sprintf(
+                        "SELECT site_id FROM avea_units WHERE device_id = '%s'",
+                        mysqli_real_escape_string($db, $deviceIp)
+                    );
+                    $site_id_result = mysqli_query($db, $site_id_query);
+
+                    if (mysqli_num_rows($site_id_result) < 1) {
+                        $site = "1"; // Default site
+                    } else {
+                        $site = mysqli_fetch_assoc($site_id_result)['site_id'];
+                    }
+
+                    $insert_query = sprintf(
+                        "INSERT INTO timesheets_office_staff (time_in, employee_id, site_id) VALUES ('%s %s', '%s', '%s')",
+                        mysqli_real_escape_string($db, $recdate),
+                        mysqli_real_escape_string($db, $rectime),
+                        mysqli_real_escape_string($db, $employee_id),
+                        mysqli_real_escape_string($db, $site)
+                    );
+                    mysqli_query($db, $insert_query);
+
+                    logData('TIMESHEET: Clock In', array(
+                        'employee_id' => $employee_id,
+                        'time_in' => $recdate . ' ' . $rectime,
+                        'site_id' => $site,
+                        'code' => $code
+                    ));
+                }
+            } else {
+                // Employee not found
+                logData('TIMESHEET: Employee not found', array(
+                    'code' => $code,
+                    'user_id' => $userId
+                ));
+            }
+        }
+        */
+        // ========================================================================
+        // END EMPLOYEE TIMESHEET INTEGRATION
+        // ========================================================================
     }
 
     // Log the result
