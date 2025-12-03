@@ -195,12 +195,7 @@ class SyncAttendanceRealtime extends Command
         }
 
         // Get records since last sync timestamp
-        $minutesSinceSync = max(1, ceil((time() - $lastSync) / 60));
-
-        Log::info("Fetching records since last sync", [
-            'last_sync' => date('Y-m-d H:i:s', $lastSync),
-            'minutes_ago' => $minutesSinceSync,
-        ]);
+        // Silently fetch - only log if records are found (logged in device class)
 
         // Use getAttendanceSince if available (Dahua device supports this)
         if (method_exists($this->device, 'getAttendanceSince')) {
