@@ -286,7 +286,7 @@ if ($method === 'GET') {
                     $site = "1";
 
                     $insert_query = sprintf(
-                        "INSERT INTO copy_timesheets_office_staff (time_in, employee_id, site_id, comment) VALUES ('%s %s', '%s', '%s', '%s')",
+                        "INSERT INTO copy_timesheets_office_staff (time_in, time_out, employee_id, site_id, comment) VALUES ('%s %s', '0000-00-00 00:00:00', '%s', '%s', '%s')",
                         mysqli_real_escape_string($db, $recdate),
                         mysqli_real_escape_string($db, $rectime),
                         mysqli_real_escape_string($db, $employee_id),
