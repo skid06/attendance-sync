@@ -220,7 +220,7 @@ if ($method === 'GET') {
         // EMPLOYEE TIMESHEET INTEGRATION (COMMENTED OUT - VERIFY BEFORE ENABLING)
         // ========================================================================
         // Uncomment the code below after verifying it matches your database structure
-        /*
+
         // Process employee timesheet (clock in/out logic)
         // $code is mapped from PerSonCardNo field (person_card_no in our records)
         $code = isset($record['person_card_no']) ? $record['person_card_no'] : '';
@@ -242,7 +242,7 @@ if ($method === 'GET') {
 
                 // Check if there's an existing open timesheet entry (last 24 hours only for efficiency)
                 $office_time_entry_query = sprintf(
-                    "SELECT id FROM timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) >= CURDATE() - INTERVAL 1 DAY ORDER BY time_in DESC LIMIT 1",
+                    "SELECT id FROM copy_timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) >= CURDATE() - INTERVAL 1 DAY ORDER BY time_in DESC LIMIT 1",
                     mysqli_real_escape_string($db, $employee_id)
                 );
                 $office_time_entry = mysqli_query($db, $office_time_entry_query);
@@ -251,7 +251,7 @@ if ($method === 'GET') {
                     // THERE'S AN EXISTING OPEN SLOT - CLOSE IT OUT (Clock Out)
                     $timesheet_id = mysqli_fetch_assoc($office_time_entry)['id'];
                     $update_query = sprintf(
-                        "UPDATE timesheets_office_staff SET time_out = '%s %s', out_activity = '8', comment='Scanned Out' WHERE id = '%s'",
+                        "UPDATE copy_timesheets_office_staff SET time_out = '%s %s', out_activity = '8', comment='Scanned Out' WHERE id = '%s'",
                         mysqli_real_escape_string($db, $recdate),
                         mysqli_real_escape_string($db, $rectime),
                         mysqli_real_escape_string($db, $timesheet_id)
@@ -270,6 +270,7 @@ if ($method === 'GET') {
 
                     // GET THE SITE ID OF THE READER/DEVICE
                     // Note: You'll need to map device_ip to your avea_units table
+                    /*
                     $site_id_query = sprintf(
                         "SELECT site_id FROM avea_units WHERE device_id = '%s'",
                         mysqli_real_escape_string($db, $deviceIp)
@@ -281,13 +282,16 @@ if ($method === 'GET') {
                     } else {
                         $site = mysqli_fetch_assoc($site_id_result)['site_id'];
                     }
+                    */
+                    $site = "1";
 
                     $insert_query = sprintf(
-                        "INSERT INTO timesheets_office_staff (time_in, employee_id, site_id) VALUES ('%s %s', '%s', '%s')",
+                        "INSERT INTO copy_timesheets_office_staff (time_in, employee_id, site_id, comment) VALUES ('%s %s', '%s', '%s', '%s')",
                         mysqli_real_escape_string($db, $recdate),
                         mysqli_real_escape_string($db, $rectime),
                         mysqli_real_escape_string($db, $employee_id),
-                        mysqli_real_escape_string($db, $site)
+                        mysqli_real_escape_string($db, $site),
+                        mysqli_real_escape_string($db, $deviceIp)
                     );
                     mysqli_query($db, $insert_query);
 
@@ -306,7 +310,7 @@ if ($method === 'GET') {
                 ));
             }
         }
-        */
+
         // ========================================================================
         // END EMPLOYEE TIMESHEET INTEGRATION
         // ========================================================================
