@@ -122,10 +122,7 @@ class SyncAttendanceRealtime extends Command
                     $hoursSinceLastSuccess = (time() - $lastSuccessfulSync) / 3600;
                     if ($hoursSinceLastSuccess >= 2) {
                         $this->warn("⚠️  No sync in " . round($hoursSinceLastSuccess, 1) . " hours. Resetting to fetch last hour...");
-                        Log::warning("Last sync is stale - resetting timestamp", [
-                            'hours_since_last_sync' => $hoursSinceLastSuccess,
-                            'last_successful_sync' => date('Y-m-d H:i:s', $lastSuccessfulSync),
-                        ]);
+                        // Auto-recovery triggered - no log to reduce noise
                         $lastSync = time() - 3600; // Reset to 1 hour ago
                         $this->saveLastSyncTimestamp($lastSync);
                     }
@@ -134,7 +131,7 @@ class SyncAttendanceRealtime extends Command
                     // This catches any edge cases where incremental sync might miss records
                     if ($loopCount % 120 == 0) {
                         $this->comment("🔄 Periodic full check (every hour)...");
-                        Log::info("Performing periodic full check", ['loop' => $loopCount]);
+                        // Periodic check - no log to reduce noise
                         $lastSync = time() - 3600; // Check last hour
                     }
 
