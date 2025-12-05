@@ -12,6 +12,7 @@ class DahuaDevice implements AttendanceDeviceInterface
     private string $connection;
     private string $table;
     private int $fetchMinutes;
+    private int $duplicateThreshold;
     private bool $connected = false;
 
     public function __construct(array $config)
@@ -19,6 +20,7 @@ class DahuaDevice implements AttendanceDeviceInterface
         $this->connection = $config['connection'] ?? 'local_attendance';
         $this->table = $config['table'] ?? 'attendance_records';
         $this->fetchMinutes = $config['fetch_minutes'] ?? 10;
+        $this->duplicateThreshold = $config['duplicate_threshold'] ?? 1; // minutes
     }
 
     /**
@@ -204,7 +206,76 @@ class DahuaDevice implements AttendanceDeviceInterface
             ];
         }
 
-        return $transformed;
+        // Remove duplicates before returning
+        return $this->removeDuplicates($transformed);
+    }
+
+    /**
+     * Remove duplicate attendance records
+     * Removes records with same person + same status within threshold minutes
+     */
+    private function removeDuplicates(array $records): array
+    {
+        if (empty($records)) {
+            return $records;
+        }
+
+        $thresholdSeconds = $this->duplicateThreshold * 60;
+        $filtered = [];
+        $removed = 0;
+
+        // Group by person to check duplicates per person
+        $byPerson = [];
+        foreach ($records as $record) {
+            $personId = $record['person_id'] ?? $record['user_id'] ?? 'unknown';
+            if (!isset($byPerson[$personId])) {
+                $byPerson[$personId] = [];
+            }
+            $byPerson[$personId][] = $record;
+        }
+
+        // Process each person's records
+        foreach ($byPerson as $personRecords) {
+            // Sort by timestamp
+            usort($personRecords, function($a, $b) {
+                return $a['raw_timestamp'] - $b['raw_timestamp'];
+            });
+
+            // Track last kept record for each status
+            $lastKept = []; // [status => timestamp]
+
+            foreach ($personRecords as $record) {
+                $status = $record['status'] ?? 'Unknown';
+                $timestamp = $record['raw_timestamp'];
+
+                // Check if this is a duplicate of the last kept record with same status
+                $isDuplicate = false;
+                if (isset($lastKept[$status])) {
+                    $timeDiff = abs($timestamp - $lastKept[$status]);
+                    if ($timeDiff <= $thresholdSeconds) {
+                        $isDuplicate = true;
+                        $removed++;
+                    }
+                }
+
+                if (!$isDuplicate) {
+                    $filtered[] = $record;
+                    $lastKept[$status] = $timestamp;
+                }
+            }
+        }
+
+        // Log if duplicates were removed
+        if ($removed > 0) {
+            Log::info("Removed {$removed} duplicate attendance records", [
+                'original_count' => count($records),
+                'after_dedup' => count($filtered),
+                'removed' => $removed,
+                'threshold_minutes' => $this->duplicateThreshold,
+            ]);
+        }
+
+        return $filtered;
     }
 
     /**

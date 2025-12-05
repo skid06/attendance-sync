@@ -40,6 +40,7 @@ return [
             'connection' => env('DAHUA_DB_CONNECTION', 'local_attendance'),
             'table' => env('DAHUA_DB_TABLE', 'attendance_records'),
             'fetch_minutes' => env('DAHUA_FETCH_MINUTES', 10),
+            'duplicate_threshold' => env('DAHUA_DUPLICATE_THRESHOLD', 1), // minutes
         ],
 
         'null' => [
