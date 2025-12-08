@@ -212,7 +212,9 @@ class DahuaDevice implements AttendanceDeviceInterface
 
     /**
      * Remove duplicate attendance records
-     * Removes records with same person + same status within threshold minutes
+     * Removes:
+     * 1. Same person + same status within threshold minutes
+     * 2. Same person + rapid status change within threshold minutes (e.g., Clock Out → Clock In)
      */
     private function removeDuplicates(array $records): array
     {
@@ -241,26 +243,37 @@ class DahuaDevice implements AttendanceDeviceInterface
                 return $a['raw_timestamp'] - $b['raw_timestamp'];
             });
 
-            // Track last kept record for each status
-            $lastKept = []; // [status => timestamp]
+            // Track last kept record (any status)
+            $lastKeptTimestamp = null;
+            $lastKeptStatus = null;
 
             foreach ($personRecords as $record) {
                 $status = $record['status'] ?? 'Unknown';
                 $timestamp = $record['raw_timestamp'];
 
-                // Check if this is a duplicate of the last kept record with same status
                 $isDuplicate = false;
-                if (isset($lastKept[$status])) {
-                    $timeDiff = abs($timestamp - $lastKept[$status]);
+
+                if ($lastKeptTimestamp !== null) {
+                    $timeDiff = abs($timestamp - $lastKeptTimestamp);
+
                     if ($timeDiff <= $thresholdSeconds) {
-                        $isDuplicate = true;
-                        $removed++;
+                        // Check if same status (duplicate scan)
+                        if ($status === $lastKeptStatus) {
+                            $isDuplicate = true;
+                            $removed++;
+                        }
+                        // Check if rapid status change (Clock In → Clock Out or vice versa)
+                        else {
+                            $isDuplicate = true;
+                            $removed++;
+                        }
                     }
                 }
 
                 if (!$isDuplicate) {
                     $filtered[] = $record;
-                    $lastKept[$status] = $timestamp;
+                    $lastKeptTimestamp = $timestamp;
+                    $lastKeptStatus = $status;
                 }
             }
         }
