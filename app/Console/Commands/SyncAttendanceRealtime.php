@@ -155,9 +155,11 @@ class SyncAttendanceRealtime extends Command
                         if ($result['success']) {
                             $this->info("   ✅ Successfully synced {$result['sent']} record(s)");
 
-                            // Update last sync timestamp to now
-                            $lastSync = time();
-                            $lastSuccessfulSync = time(); // Track when we last successfully synced
+                            // Update last sync timestamp to the max timestamp of records we just sent
+                            // This prevents re-fetching records with the same timestamp
+                            $maxTimestamp = max(array_column($records, 'raw_timestamp'));
+                            $lastSync = $maxTimestamp;
+                            $lastSuccessfulSync = time(); // Track when we last successfully synced (for stale detection)
                             $this->saveLastSyncTimestamp($lastSync);
                         } else {
                             $this->error("   ❌ Sync failed: {$result['message']}");
