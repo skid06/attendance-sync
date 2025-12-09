@@ -11,7 +11,7 @@ return [
     | used to connect and fetch attendance records. You may set this to any
     | of the drivers defined in the "devices" array below.
     |
-    | Supported: "zkteco", "dahua", "null" (for testing)
+    | Supported: "zkteco", "dahua", "hikvision", "null" (for testing)
     |
     */
 
@@ -41,6 +41,14 @@ return [
             'table' => env('DAHUA_DB_TABLE', 'attendance_records'),
             'fetch_minutes' => env('DAHUA_FETCH_MINUTES', 10),
             'duplicate_threshold' => env('DAHUA_DUPLICATE_THRESHOLD', 1), // minutes
+        ],
+
+        'hikvision' => [
+            'driver' => 'hikvision',
+            'connection' => env('HIKVISION_DB_CONNECTION', 'local_attendance'),
+            'table' => env('HIKVISION_DB_TABLE', 'attendance_records'),
+            'fetch_minutes' => env('HIKVISION_FETCH_MINUTES', 10),
+            'duplicate_threshold' => env('HIKVISION_DUPLICATE_THRESHOLD', 1), // minutes
         ],
 
         'null' => [
