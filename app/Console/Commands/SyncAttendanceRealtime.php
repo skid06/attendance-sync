@@ -4,8 +4,13 @@ namespace App\Console\Commands;
 
 use App\Contracts\AttendanceDeviceInterface;
 use App\Services\AttendanceSyncService;
+use App\Services\Devices\DahuaDevice;
+use App\Services\Devices\HikVisionDevice;
+use App\Services\Devices\NullDevice;
+use App\Services\Devices\ZKTecoDevice;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Exception;
 
 class SyncAttendanceRealtime extends Command
@@ -16,6 +21,7 @@ class SyncAttendanceRealtime extends Command
      * @var string
      */
     protected $signature = 'attendance:sync-realtime
+                            {--driver= : Specify device driver (dahua, hikvision, zkteco)}
                             {--interval=30 : Poll interval in seconds}
                             {--batch-size=100 : Number of records to send per batch}
                             {--test : Test connections and exit (does not start continuous sync)}';
@@ -27,15 +33,12 @@ class SyncAttendanceRealtime extends Command
      */
     protected $description = 'Continuously sync attendance data in real-time (polls database every 30 seconds)';
 
-    private string $lastSyncFile;
     private bool $shouldStop = false;
 
     public function __construct(
-        private AttendanceDeviceInterface $device,
         private AttendanceSyncService $syncService
     ) {
         parent::__construct();
-        $this->lastSyncFile = storage_path('app/last-sync-timestamp.txt');
     }
 
     /**
@@ -43,14 +46,21 @@ class SyncAttendanceRealtime extends Command
      */
     public function handle(): int
     {
+        // Resolve device based on --driver option or use default
+        $driverName = $this->option('driver') ?: config('attendance.default');
+        $device = $this->createDevice($driverName);
+
+        // Device-specific last sync file
+        $lastSyncFile = storage_path("app/last-sync-timestamp-{$driverName}.txt");
+
         $interval = (int) $this->option('interval');
         $batchSize = (int) $this->option('batch-size');
 
-        $deviceInfo = $this->device->getDeviceInfo();
-        $driverName = ucfirst($deviceInfo['type'] ?? 'Unknown');
+        $deviceInfo = $device->getDeviceInfo();
+        $driverDisplayName = ucfirst($deviceInfo['type'] ?? 'Unknown');
 
         $this->info('╔═══════════════════════════════════════════════════════════╗');
-        $this->info("║   Real-Time Attendance Sync ({$driverName})                   ");
+        $this->info("║   Real-Time Attendance Sync ({$driverDisplayName})                   ");
         $this->info('╚═══════════════════════════════════════════════════════════╝');
         $this->newLine();
 
@@ -68,7 +78,7 @@ class SyncAttendanceRealtime extends Command
         try {
             // Test connection first
             $this->info("Testing connection to device...");
-            if (!$this->device->connect()) {
+            if (!$device->connect()) {
                 $this->error("❌ Failed to connect to device");
                 return 1;
             }
@@ -80,7 +90,7 @@ class SyncAttendanceRealtime extends Command
             if (!$this->syncService->testConnection()) {
                 $this->warn("⚠️  Warning: Could not connect to remote API");
                 if ($this->option('test')) {
-                    $this->device->disconnect();
+                    $device->disconnect();
                     return 1;
                 }
                 $this->warn("    Will continue and retry when syncing...");
@@ -98,12 +108,12 @@ class SyncAttendanceRealtime extends Command
                 }
                 $this->newLine();
                 $this->info("✅ Ready for real-time sync. Run without --test to start continuous monitoring.");
-                $this->device->disconnect();
+                $device->disconnect();
                 return 0;
             }
 
             // Initialize last sync timestamp
-            $lastSync = $this->getLastSyncTimestamp();
+            $lastSync = $this->getLastSyncTimestamp($lastSyncFile);
             $this->info("📝 Last sync: " . ($lastSync ? date('Y-m-d H:i:s', $lastSync) : 'Never'));
             $this->info("🚀 Real-time sync is now active. Press Ctrl+C to stop.");
             $this->newLine();
@@ -124,7 +134,7 @@ class SyncAttendanceRealtime extends Command
                         $this->warn("⚠️  No sync in " . round($hoursSinceLastSuccess, 1) . " hours. Resetting to fetch last hour...");
                         // Auto-recovery triggered - no log to reduce noise
                         $lastSync = time() - 3600; // Reset to 1 hour ago
-                        $this->saveLastSyncTimestamp($lastSync);
+                        $this->saveLastSyncTimestamp($lastSync, $lastSyncFile);
                     }
 
                     // 2. Periodic full check (every 120 loops = ~1 hour)
@@ -136,7 +146,7 @@ class SyncAttendanceRealtime extends Command
                     }
 
                     // Get new records since last sync
-                    $records = $this->getNewRecords($lastSync);
+                    $records = $this->getNewRecords($lastSync, $device);
 
                     if (empty($records)) {
                         // Silently continue - no output for empty checks
@@ -160,7 +170,7 @@ class SyncAttendanceRealtime extends Command
                             $maxTimestamp = max(array_column($records, 'raw_timestamp'));
                             $lastSync = $maxTimestamp;
                             $lastSuccessfulSync = time(); // Track when we last successfully synced (for stale detection)
-                            $this->saveLastSyncTimestamp($lastSync);
+                            $this->saveLastSyncTimestamp($lastSync, $lastSyncFile);
                         } else {
                             $this->error("   ❌ Sync failed: {$result['message']}");
                             Log::error("Real-time sync failed", $result);
@@ -191,7 +201,7 @@ class SyncAttendanceRealtime extends Command
 
             $this->newLine();
             $this->info("🛑 Real-time sync stopped gracefully");
-            $this->device->disconnect();
+            $device->disconnect();
 
             return 0;
 
@@ -209,50 +219,50 @@ class SyncAttendanceRealtime extends Command
     /**
      * Get new records since last sync
      */
-    private function getNewRecords(?int $lastSync): array
+    private function getNewRecords(?int $lastSync, AttendanceDeviceInterface $device): array
     {
         if ($lastSync === null) {
             // First run - get records from last hour
             Log::info("First real-time sync run - fetching last hour");
-            return $this->device->getAttendance();
+            return $device->getAttendance();
         }
 
         // Get records since last sync timestamp
         // Silently fetch - only log if records are found (logged in device class)
 
         // Use getAttendanceSince if available (Dahua device supports this)
-        if (method_exists($this->device, 'getAttendanceSince')) {
-            return $this->device->getAttendanceSince($lastSync);
+        if (method_exists($device, 'getAttendanceSince')) {
+            return $device->getAttendanceSince($lastSync);
         }
 
         // Fallback to regular getAttendance for other devices
-        return $this->device->getAttendance();
+        return $device->getAttendance();
     }
 
     /**
      * Get last sync timestamp from file
      */
-    private function getLastSyncTimestamp(): ?int
+    private function getLastSyncTimestamp(string $lastSyncFile): ?int
     {
-        if (!file_exists($this->lastSyncFile)) {
+        if (!file_exists($lastSyncFile)) {
             return null;
         }
 
-        $timestamp = file_get_contents($this->lastSyncFile);
+        $timestamp = file_get_contents($lastSyncFile);
         return $timestamp ? (int) $timestamp : null;
     }
 
     /**
      * Save last sync timestamp to file
      */
-    private function saveLastSyncTimestamp(int $timestamp): void
+    private function saveLastSyncTimestamp(int $timestamp, string $lastSyncFile): void
     {
-        $dir = dirname($this->lastSyncFile);
+        $dir = dirname($lastSyncFile);
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
-        file_put_contents($this->lastSyncFile, $timestamp);
+        file_put_contents($lastSyncFile, $timestamp);
     }
 
     /**
@@ -263,5 +273,28 @@ class SyncAttendanceRealtime extends Command
         $this->shouldStop = true;
         $this->newLine();
         $this->warn("⚠️  Shutdown signal received, stopping gracefully...");
+    }
+
+    /**
+     * Create an attendance device instance based on driver name
+     */
+    private function createDevice(string $driver): AttendanceDeviceInterface
+    {
+        $config = config("attendance.devices.{$driver}");
+
+        if (empty($config)) {
+            throw new InvalidArgumentException("Attendance device driver [{$driver}] is not configured.");
+        }
+
+        return match ($driver) {
+            'zkteco' => new ZKTecoDevice(
+                $config['ip'],
+                $config['port'] ?? 4370
+            ),
+            'dahua' => new DahuaDevice($config),
+            'hikvision' => new HikVisionDevice($config),
+            'null' => new NullDevice(),
+            default => throw new InvalidArgumentException("Unsupported attendance device driver: {$driver}"),
+        };
     }
 }

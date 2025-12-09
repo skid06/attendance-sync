@@ -4,7 +4,12 @@ namespace App\Console\Commands;
 
 use App\Contracts\AttendanceDeviceInterface;
 use App\Services\AttendanceSyncService;
+use App\Services\Devices\DahuaDevice;
+use App\Services\Devices\HikVisionDevice;
+use App\Services\Devices\NullDevice;
+use App\Services\Devices\ZKTecoDevice;
 use Illuminate\Console\Command;
+use InvalidArgumentException;
 use Exception;
 
 class SyncAttendanceData extends Command
@@ -15,6 +20,7 @@ class SyncAttendanceData extends Command
      * @var string
      */
     protected $signature = 'attendance:sync
+                            {--driver= : Specify device driver (dahua, hikvision, zkteco)}
                             {--clear : Clear attendance records from device after sync}
                             {--batch-size=100 : Number of records to send per batch}
                             {--test : Test connection without syncing data}';
@@ -27,7 +33,6 @@ class SyncAttendanceData extends Command
     protected $description = 'Sync attendance data from device to remote server';
 
     public function __construct(
-        private AttendanceDeviceInterface $device,
         private AttendanceSyncService $syncService
     ) {
         parent::__construct();
@@ -38,23 +43,27 @@ class SyncAttendanceData extends Command
      */
     public function handle(): int
     {
-        $deviceInfo = $this->device->getDeviceInfo();
-        $driverName = ucfirst($deviceInfo['type'] ?? 'Unknown');
+        // Resolve device based on --driver option or use default
+        $driverName = $this->option('driver') ?: config('attendance.default');
+        $device = $this->createDevice($driverName);
+
+        $deviceInfo = $device->getDeviceInfo();
+        $driverDisplayName = ucfirst($deviceInfo['type'] ?? 'Unknown');
 
         $this->info('╔═══════════════════════════════════════════════════════════╗');
-        $this->info("║       Attendance Data Sync ({$driverName})                      ");
+        $this->info("║       Attendance Data Sync ({$driverDisplayName})                      ");
         $this->info('╚═══════════════════════════════════════════════════════════╝');
         $this->newLine();
 
         try {
             // Test connection mode
             if ($this->option('test')) {
-                return $this->testConnections();
+                return $this->testConnections($device);
             }
 
             // Connect to device
             $this->info('Connecting to attendance device...');
-            if (!$this->device->connect()) {
+            if (!$device->connect()) {
                 $this->error('Failed to connect to attendance device');
                 return Command::FAILURE;
             }
@@ -63,11 +72,11 @@ class SyncAttendanceData extends Command
 
             // Get attendance records
             $this->info('Fetching attendance records from device...');
-            $records = $this->device->getAttendance();
+            $records = $device->getAttendance();
 
             if (empty($records)) {
                 $this->warn('No attendance records found on device');
-                $this->device->disconnect();
+                $device->disconnect();
                 return Command::SUCCESS;
             }
 
@@ -94,7 +103,7 @@ class SyncAttendanceData extends Command
             if ($this->option('clear') && $result['success']) {
                 if ($this->confirm('Clear attendance records from device?', true)) {
                     $this->info('Clearing attendance records from device...');
-                    if ($this->device->clearAttendance()) {
+                    if ($device->clearAttendance()) {
                         $this->info('Attendance records cleared successfully');
                     } else {
                         $this->error('Failed to clear attendance records');
@@ -103,7 +112,7 @@ class SyncAttendanceData extends Command
             }
 
             // Disconnect from device
-            $this->device->disconnect();
+            $device->disconnect();
 
             $this->newLine();
             $this->info('Sync process completed');
@@ -117,7 +126,9 @@ class SyncAttendanceData extends Command
                 $this->error($e->getTraceAsString());
             }
 
-            $this->device->disconnect();
+            if (isset($device)) {
+                $device->disconnect();
+            }
 
             return Command::FAILURE;
         }
@@ -126,14 +137,14 @@ class SyncAttendanceData extends Command
     /**
      * Test connections to device and remote API
      */
-    private function testConnections(): int
+    private function testConnections(AttendanceDeviceInterface $device): int
     {
         $this->info('Testing connections...');
         $this->newLine();
 
         // Test device connection
         $this->info('Testing attendance device connection...');
-        if ($this->device->testConnection()) {
+        if ($device->testConnection()) {
             $this->info('Attendance device connection successful');
         } else {
             $this->error('Attendance device connection failed');
@@ -199,5 +210,28 @@ class SyncAttendanceData extends Command
                 ['Batches', $result['batches'] ?? 1],
             ]
         );
+    }
+
+    /**
+     * Create an attendance device instance based on driver name
+     */
+    private function createDevice(string $driver): AttendanceDeviceInterface
+    {
+        $config = config("attendance.devices.{$driver}");
+
+        if (empty($config)) {
+            throw new InvalidArgumentException("Attendance device driver [{$driver}] is not configured.");
+        }
+
+        return match ($driver) {
+            'zkteco' => new ZKTecoDevice(
+                $config['ip'],
+                $config['port'] ?? 4370
+            ),
+            'dahua' => new DahuaDevice($config),
+            'hikvision' => new HikVisionDevice($config),
+            'null' => new NullDevice(),
+            default => throw new InvalidArgumentException("Unsupported attendance device driver: {$driver}"),
+        };
     }
 }
