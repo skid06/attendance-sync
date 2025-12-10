@@ -139,15 +139,17 @@ class SyncAttendanceRealtime extends Command
 
                     // 2. Periodic full check (every 120 loops = ~1 hour)
                     // This catches any edge cases where incremental sync might miss records
+                    // We expand the FETCH window but still filter to only send truly new records
+                    $fetchFrom = $lastSync;
                     if ($loopCount % 120 == 0) {
                         $this->comment("🔄 Periodic full check (every hour)...");
-                        // Periodic check - no log to reduce noise
-                        $lastSync = time() - 3600; // Check last hour
+                        // Expand fetch window to last hour for the periodic check
+                        $fetchFrom = time() - 3600;
                     }
 
                     // Get new records since last sync
-                    // This fetches from lastSync-60 to catch duplicates across poll cycles
-                    $allRecords = $this->getNewRecords($lastSync, $device);
+                    // This fetches from fetchFrom-60 to catch duplicates across poll cycles
+                    $allRecords = $this->getNewRecords($fetchFrom, $device);
 
                     // Filter to only send truly NEW records (timestamp > lastSync)
                     // The wider fetch window allows duplicate filtering to see duplicates,
@@ -155,6 +157,28 @@ class SyncAttendanceRealtime extends Command
                     $records = array_filter($allRecords, function($record) use ($lastSync) {
                         return $record['raw_timestamp'] > $lastSync;
                     });
+
+                    // Re-index array after filtering (array_filter preserves keys)
+                    $records = array_values($records);
+
+                    // Debug logging
+                    if (!empty($allRecords) && empty($records)) {
+                        Log::info("All records filtered out (already synced)", [
+                            'fetched' => count($allRecords),
+                            'after_filter' => count($records),
+                            'lastSync' => $lastSync,
+                            'lastSync_readable' => date('Y-m-d H:i:s', $lastSync),
+                        ]);
+                    } elseif (!empty($records)) {
+                        Log::info("Found new records after filtering", [
+                            'fetched' => count($allRecords),
+                            'after_filter' => count($records),
+                            'lastSync' => $lastSync,
+                            'lastSync_readable' => date('Y-m-d H:i:s', $lastSync),
+                            'first_record_time' => date('Y-m-d H:i:s', $records[0]['raw_timestamp']),
+                            'last_record_time' => date('Y-m-d H:i:s', $records[count($records)-1]['raw_timestamp']),
+                        ]);
+                    }
 
                     if (empty($records)) {
                         // Silently continue - no output for empty checks
