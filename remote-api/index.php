@@ -240,10 +240,12 @@ if ($method === 'GET') {
             if (mysqli_num_rows($employee) == 1) {
                 $employee_id = mysqli_fetch_assoc($employee)['id'];
 
-                // Check if there's an existing open timesheet entry (last 24 hours only for efficiency)
+                // Check if there's an existing open timesheet entry from the SAME DATE as this scan
+                // This prevents old open timesheets from being closed by new day's scans
                 $office_time_entry_query = sprintf(
-                    "SELECT id FROM copy_timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) >= CURDATE() - INTERVAL 1 DAY ORDER BY time_in DESC LIMIT 1",
-                    mysqli_real_escape_string($db, $employee_id)
+                    "SELECT id FROM copy_timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) = '%s' ORDER BY time_in DESC LIMIT 1",
+                    mysqli_real_escape_string($db, $employee_id),
+                    mysqli_real_escape_string($db, $recdate)
                 );
                 $office_time_entry = mysqli_query($db, $office_time_entry_query);
 

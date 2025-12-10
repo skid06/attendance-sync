@@ -146,7 +146,15 @@ class SyncAttendanceRealtime extends Command
                     }
 
                     // Get new records since last sync
-                    $records = $this->getNewRecords($lastSync, $device);
+                    // This fetches from lastSync-60 to catch duplicates across poll cycles
+                    $allRecords = $this->getNewRecords($lastSync, $device);
+
+                    // Filter to only send truly NEW records (timestamp > lastSync)
+                    // The wider fetch window allows duplicate filtering to see duplicates,
+                    // but we only send records we haven't sent before
+                    $records = array_filter($allRecords, function($record) use ($lastSync) {
+                        return $record['raw_timestamp'] > $lastSync;
+                    });
 
                     if (empty($records)) {
                         // Silently continue - no output for empty checks
@@ -218,6 +226,7 @@ class SyncAttendanceRealtime extends Command
 
     /**
      * Get new records since last sync
+     * Fetches from 60 seconds before lastSync to catch duplicates across poll cycles
      */
     private function getNewRecords(?int $lastSync, AttendanceDeviceInterface $device): array
     {
@@ -228,11 +237,15 @@ class SyncAttendanceRealtime extends Command
         }
 
         // Get records since last sync timestamp
+        // We fetch from 60 seconds before lastSync to catch duplicates that might
+        // have arrived in different poll cycles, then rely on duplicate filtering
         // Silently fetch - only log if records are found (logged in device class)
 
         // Use getAttendanceSince if available (Dahua device supports this)
         if (method_exists($device, 'getAttendanceSince')) {
-            return $device->getAttendanceSince($lastSync);
+            // Fetch from 60 seconds before lastSync to catch cross-batch duplicates
+            $fetchFrom = $lastSync - 60;
+            return $device->getAttendanceSince($fetchFrom);
         }
 
         // Fallback to regular getAttendance for other devices
