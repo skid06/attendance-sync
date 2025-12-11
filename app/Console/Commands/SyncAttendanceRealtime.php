@@ -264,6 +264,11 @@ class SyncAttendanceRealtime extends Command
                 'unix_timestamp' => $midnightToday
             ]);
 
+            // Initialize lastSync to midnight so we don't re-fetch on every poll
+            $driverName = $this->option('driver') ?: config('attendance.default');
+            $lastSyncFile = storage_path("app/last-sync-timestamp-{$driverName}.txt");
+            $this->saveLastSyncTimestamp($midnightToday, $lastSyncFile);
+
             // Use getAttendanceSince if available to fetch from midnight
             if (method_exists($device, 'getAttendanceSince')) {
                 $records = $device->getAttendanceSince($midnightToday);
@@ -277,9 +282,6 @@ class SyncAttendanceRealtime extends Command
 
             // Fallback: return empty and start from now
             $this->warn("⚠️  Device doesn't support getAttendanceSince - starting from now");
-            $driverName = $this->option('driver') ?: config('attendance.default');
-            $lastSyncFile = storage_path("app/last-sync-timestamp-{$driverName}.txt");
-            $this->saveLastSyncTimestamp(time(), $lastSyncFile);
             return [];
         }
 
