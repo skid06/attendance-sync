@@ -258,16 +258,25 @@ class SyncAttendanceRealtime extends Command
             // First run - start from midnight today (sync all of today's records)
             // This prevents syncing old data from previous days
             $midnightToday = strtotime('today 00:00:00');
+            $this->info("📅 First run - fetching records from: " . date('Y-m-d H:i:s', $midnightToday));
             Log::info("First real-time sync run - starting from midnight today", [
-                'start_time' => date('Y-m-d H:i:s', $midnightToday)
+                'start_time' => date('Y-m-d H:i:s', $midnightToday),
+                'unix_timestamp' => $midnightToday
             ]);
 
             // Use getAttendanceSince if available to fetch from midnight
             if (method_exists($device, 'getAttendanceSince')) {
-                return $device->getAttendanceSince($midnightToday);
+                $records = $device->getAttendanceSince($midnightToday);
+                $this->info("📊 Fetched " . count($records) . " record(s) from database");
+                if (count($records) > 0) {
+                    $this->info("   First record: " . $records[0]['timestamp']);
+                    $this->info("   Last record: " . $records[count($records)-1]['timestamp']);
+                }
+                return $records;
             }
 
             // Fallback: return empty and start from now
+            $this->warn("⚠️  Device doesn't support getAttendanceSince - starting from now");
             $driverName = $this->option('driver') ?: config('attendance.default');
             $lastSyncFile = storage_path("app/last-sync-timestamp-{$driverName}.txt");
             $this->saveLastSyncTimestamp(time(), $lastSyncFile);
