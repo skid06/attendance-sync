@@ -255,9 +255,12 @@ class SyncAttendanceRealtime extends Command
     private function getNewRecords(?int $lastSync, AttendanceDeviceInterface $device): array
     {
         if ($lastSync === null) {
-            // First run - get records from last hour
-            Log::info("First real-time sync run - fetching last hour");
-            return $device->getAttendance();
+            // First run - start from current time (only sync new records from now on)
+            // This prevents syncing hours/days of old data on first run
+            Log::info("First real-time sync run - starting from current time");
+            $currentTime = time();
+            $this->saveLastSyncTimestamp($currentTime, storage_path("app/last-sync-timestamp-{$this->option('driver') ?: config('attendance.default')}.txt"));
+            return []; // Return empty array, will start syncing from next poll
         }
 
         // Get records since last sync timestamp
