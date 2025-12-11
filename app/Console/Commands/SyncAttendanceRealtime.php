@@ -259,7 +259,9 @@ class SyncAttendanceRealtime extends Command
             // This prevents syncing hours/days of old data on first run
             Log::info("First real-time sync run - starting from current time");
             $currentTime = time();
-            $this->saveLastSyncTimestamp($currentTime, storage_path("app/last-sync-timestamp-{$this->option('driver') ?: config('attendance.default')}.txt"));
+            $driverName = $this->option('driver') ?: config('attendance.default');
+            $lastSyncFile = storage_path("app/last-sync-timestamp-{$driverName}.txt");
+            $this->saveLastSyncTimestamp($currentTime, $lastSyncFile);
             return []; // Return empty array, will start syncing from next poll
         }
 
