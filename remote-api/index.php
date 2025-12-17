@@ -222,14 +222,30 @@ if ($method === 'GET') {
         // Uncomment the code below after verifying it matches your database structure
 
         // Process employee timesheet (clock in/out logic)
-        // $code is mapped from PerSonCardNo field (person_card_no in our records)
+        // Handle different device types:
+        // - Dahua: uses person_card_no (RFID tag) to look up employee
+        // - HikVision: provides employee_id directly
+
+        // Convert timestamp to separate date and time for compatibility
+        $recdate = date('Y-m-d', $rawTimestamp);
+        $rectime = date('H:i:s', $rawTimestamp);
+
+        $employee_id = null;
         $code = isset($record['person_card_no']) ? $record['person_card_no'] : '';
 
-        if (!empty($code)) {
-            // Convert timestamp to separate date and time for compatibility
-            $recdate = date('Y-m-d', $rawTimestamp);
-            $rectime = date('H:i:s', $rawTimestamp);
+        // Check device type
+        $deviceType = isset($deviceInfo['type']) ? $deviceInfo['type'] : '';
 
+        // HikVision provides employee_id directly
+        if ($deviceType === 'hikvision' && !empty($record['employee_id'])) {
+            $employee_id = intval($record['employee_id']);
+            logData('TIMESHEET: Using HikVision employee_id', array(
+                'employee_id' => $employee_id,
+                'device_type' => $deviceType
+            ));
+        }
+        // Dahua uses RFID tag to look up employee
+        elseif (!empty($code)) {
             // FIND EMPLOYEE by RFID tag (using PerSonCardNo)
             $employee_query = sprintf(
                 "SELECT id FROM employees WHERE rfid_tag='%s' AND LENGTH(rfid_tag)>2",
@@ -239,18 +255,55 @@ if ($method === 'GET') {
 
             if (mysqli_num_rows($employee) == 1) {
                 $employee_id = mysqli_fetch_assoc($employee)['id'];
+            } else {
+                // Employee not found
+                logData('TIMESHEET: Employee not found', array(
+                    'code' => $code,
+                    'user_id' => $userId
+                ));
+            }
+        }
 
-                // Check if there's an existing open timesheet entry from the SAME DATE as this scan
-                // This prevents old open timesheets from being closed by new day's scans
+        // Process timesheet if we have an employee_id (from either device type)
+        if ($employee_id !== null) {
+            // Determine if this is Clock In or Clock Out
+            // HikVision: uses 'direction' field ("In" or "Out")
+            // Dahua: uses toggle logic (if open entry exists, close it; otherwise create new)
+
+            $isClockIn = false;
+            $isClockOut = false;
+
+            if ($deviceType === 'hikvision') {
+                // HikVision has explicit direction field
+                $direction = isset($record['direction']) ? $record['direction'] : '';
+                $isClockIn = (strtolower($direction) === 'in');
+                $isClockOut = (strtolower($direction) === 'out');
+            } else {
+                // Dahua uses toggle logic - check if open entry exists
                 $office_time_entry_query = sprintf(
                     "SELECT id FROM copy_timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) = '%s' ORDER BY time_in DESC LIMIT 1",
                     mysqli_real_escape_string($db, $employee_id),
                     mysqli_real_escape_string($db, $recdate)
                 );
                 $office_time_entry = mysqli_query($db, $office_time_entry_query);
+                $isClockOut = (mysqli_num_rows($office_time_entry) > 0);
+                $isClockIn = !$isClockOut;
+            }
+
+            // Process Clock Out
+            if ($isClockOut) {
+                // Find existing open timesheet to close
+                if ($deviceType === 'hikvision') {
+                    // HikVision: Find open timesheet for this employee
+                    $office_time_entry_query = sprintf(
+                        "SELECT id FROM copy_timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) = '%s' ORDER BY time_in DESC LIMIT 1",
+                        mysqli_real_escape_string($db, $employee_id),
+                        mysqli_real_escape_string($db, $recdate)
+                    );
+                    $office_time_entry = mysqli_query($db, $office_time_entry_query);
+                }
 
                 if (mysqli_num_rows($office_time_entry) > 0) {
-                    // THERE'S AN EXISTING OPEN SLOT - CLOSE IT OUT (Clock Out)
                     $timesheet_id = mysqli_fetch_assoc($office_time_entry)['id'];
                     $update_query = sprintf(
                         "UPDATE copy_timesheets_office_staff SET time_out = '%s %s', out_activity = '8', comment='Scanned Out' WHERE id = '%s'",
@@ -264,51 +317,54 @@ if ($method === 'GET') {
                         'employee_id' => $employee_id,
                         'timesheet_id' => $timesheet_id,
                         'time_out' => $recdate . ' ' . $rectime,
-                        'code' => $code
+                        'direction' => isset($record['direction']) ? $record['direction'] : 'toggle',
+                        'device_type' => $deviceType
                     ));
-
                 } else {
-                    // CREATE A NEW RECORD (Clock In)
-
-                    // GET THE SITE ID OF THE READER/DEVICE
-                    // Note: You'll need to map device_ip to your avea_units table
-                    /*
-                    $site_id_query = sprintf(
-                        "SELECT site_id FROM avea_units WHERE device_id = '%s'",
-                        mysqli_real_escape_string($db, $deviceIp)
-                    );
-                    $site_id_result = mysqli_query($db, $site_id_query);
-
-                    if (mysqli_num_rows($site_id_result) < 1) {
-                        $site = "1"; // Default site
-                    } else {
-                        $site = mysqli_fetch_assoc($site_id_result)['site_id'];
-                    }
-                    */
-                    $site = "1";
-
-                    $insert_query = sprintf(
-                        "INSERT INTO copy_timesheets_office_staff (time_in, time_out, employee_id, site_id, comment) VALUES ('%s %s', '0000-00-00 00:00:00', '%s', '%s', '%s')",
-                        mysqli_real_escape_string($db, $recdate),
-                        mysqli_real_escape_string($db, $rectime),
-                        mysqli_real_escape_string($db, $employee_id),
-                        mysqli_real_escape_string($db, $site),
-                        mysqli_real_escape_string($db, $deviceIp)
-                    );
-                    mysqli_query($db, $insert_query);
-
-                    logData('TIMESHEET: Clock In', array(
+                    // No open timesheet found for Clock Out
+                    logData('TIMESHEET: WARNING - Clock Out without open timesheet', array(
                         'employee_id' => $employee_id,
-                        'time_in' => $recdate . ' ' . $rectime,
-                        'site_id' => $site,
-                        'code' => $code
+                        'time' => $recdate . ' ' . $rectime,
+                        'device_type' => $deviceType
                     ));
                 }
-            } else {
-                // Employee not found
-                logData('TIMESHEET: Employee not found', array(
-                    'code' => $code,
-                    'user_id' => $userId
+            }
+
+            // Process Clock In
+            if ($isClockIn) {
+                // GET THE SITE ID OF THE READER/DEVICE
+                // Note: You'll need to map device_ip to your avea_units table
+                /*
+                $site_id_query = sprintf(
+                    "SELECT site_id FROM avea_units WHERE device_id = '%s'",
+                    mysqli_real_escape_string($db, $deviceIp)
+                );
+                $site_id_result = mysqli_query($db, $site_id_query);
+
+                if (mysqli_num_rows($site_id_result) < 1) {
+                    $site = "1"; // Default site
+                } else {
+                    $site = mysqli_fetch_assoc($site_id_result)['site_id'];
+                }
+                */
+                $site = "1";
+
+                $insert_query = sprintf(
+                    "INSERT INTO copy_timesheets_office_staff (time_in, time_out, employee_id, site_id, comment) VALUES ('%s %s', '0000-00-00 00:00:00', '%s', '%s', '%s')",
+                    mysqli_real_escape_string($db, $recdate),
+                    mysqli_real_escape_string($db, $rectime),
+                    mysqli_real_escape_string($db, $employee_id),
+                    mysqli_real_escape_string($db, $site),
+                    mysqli_real_escape_string($db, $deviceIp)
+                );
+                mysqli_query($db, $insert_query);
+
+                logData('TIMESHEET: Clock In', array(
+                    'employee_id' => $employee_id,
+                    'time_in' => $recdate . ' ' . $rectime,
+                    'site_id' => $site,
+                    'direction' => isset($record['direction']) ? $record['direction'] : 'toggle',
+                    'device_type' => $deviceType
                 ));
             }
         }

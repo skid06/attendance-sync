@@ -193,6 +193,7 @@ class HikVisionDevice implements AttendanceDeviceInterface
                 'attendance_datetime' => $record['authDateTime'] ?? null,  // Use authDateTime field
                 'attendance_state' => $record['AttendanceState'] ?? null,
                 'attendance_method' => $record['AttendanceMethod'] ?? null,
+                'direction' => $record['direction'] ?? null,  // In or Out
                 'device_ip_address' => $record['DeviceIPAddress'] ?? null,
                 'device_name' => $record['DeviceName'] ?? null,
                 'snapshots_path' => $record['SnapshotsPath'] ?? null,
