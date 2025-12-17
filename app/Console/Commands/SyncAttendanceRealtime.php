@@ -126,6 +126,10 @@ class SyncAttendanceRealtime extends Command
                 $loopCount++;
 
                 try {
+                    // Re-read lastSync from file at the start of each loop
+                    // This ensures we pick up the timestamp created on first run
+                    $lastSync = $this->getLastSyncTimestamp($lastSyncFile);
+
                     // Automatic recovery mechanisms:
 
                     // 1. Check if last sync is stale (no successful sync in last 2 hours)
