@@ -50,24 +50,23 @@ class HikVisionDevice implements AttendanceDeviceInterface
     }
 
     /**
-     * Get attendance records from local database (last N minutes based on AttendanceDateTime epoch)
+     * Get attendance records from local database (last N minutes based on authDateTime)
      */
     public function getAttendance(): array
     {
         try {
-            // Convert to milliseconds since HikVision stores timestamps in milliseconds
-            $epochThreshold = now()->subMinutes($this->fetchMinutes)->timestamp * 1000;
+            // authDateTime is a DateTime string, not milliseconds
+            $threshold = now()->subMinutes($this->fetchMinutes)->format('Y-m-d H:i:s');
 
             Log::info("Querying HikVision database", [
-                'threshold_ms' => $epochThreshold,
-                'threshold_readable' => date('Y-m-d H:i:s', $epochThreshold / 1000),
+                'threshold' => $threshold,
                 'fetch_minutes' => $this->fetchMinutes,
             ]);
 
             $rawRecords = DB::connection($this->connection)
                 ->table($this->table)
-                ->where('AttendanceDateTime', '>=', $epochThreshold)
-                ->orderBy('AttendanceDateTime', 'desc')
+                ->where('authDateTime', '>=', $threshold)
+                ->orderBy('authDateTime', 'desc')
                 ->get();
 
             // Only log when records are found
@@ -93,13 +92,13 @@ class HikVisionDevice implements AttendanceDeviceInterface
     public function getAttendanceSince(int $unixTimestamp): array
     {
         try {
-            // Convert Unix timestamp (seconds) to milliseconds
-            $epochThreshold = $unixTimestamp * 1000;
+            // Convert Unix timestamp to DateTime string for comparison
+            $threshold = date('Y-m-d H:i:s', $unixTimestamp);
 
             $rawRecords = DB::connection($this->connection)
                 ->table($this->table)
-                ->where('AttendanceDateTime', '>', $epochThreshold)
-                ->orderBy('AttendanceDateTime', 'asc')
+                ->where('authDateTime', '>', $threshold)
+                ->orderBy('authDateTime', 'asc')
                 ->get();
 
             // Only log when records are found
@@ -143,7 +142,7 @@ class HikVisionDevice implements AttendanceDeviceInterface
         try {
             $latestRecord = DB::connection($this->connection)
                 ->table($this->table)
-                ->orderBy('AttendanceDateTime', 'desc')
+                ->orderBy('authDateTime', 'desc')
                 ->first();
 
             return [
@@ -152,10 +151,7 @@ class HikVisionDevice implements AttendanceDeviceInterface
                 'table' => $this->table,
                 'fetch_minutes' => $this->fetchMinutes,
                 'connected' => $this->connected,
-                'latest_epoch' => $latestRecord->AttendanceDateTime ?? null,
-                'latest_time' => $latestRecord->AttendanceDateTime
-                    ? date('Y-m-d H:i:s', $latestRecord->AttendanceDateTime / 1000)  // Convert milliseconds to seconds
-                    : null,
+                'latest_time' => $latestRecord->authDateTime ?? null,  // authDateTime is already in DateTime format
             ];
         } catch (Exception $e) {
             Log::error("Error getting HikVision device info: " . $e->getMessage());
@@ -180,21 +176,21 @@ class HikVisionDevice implements AttendanceDeviceInterface
 
             $transformed[] = [
                 // Standardized fields
-                'user_id' => $record['PersonID'] ?? $record['user_id'] ?? 'Unknown',
-                'timestamp' => isset($record['AttendanceDateTime']) && $record['AttendanceDateTime'] > 0
-                    ? date('Y-m-d H:i:s', $record['AttendanceDateTime'] / 1000)  // Convert milliseconds to seconds
+                'employee_id' => $record['employee_id'] ?? $record['employee_id'] ?? 'Unknown',
+                'timestamp' => isset($record['authDateTime']) && !empty($record['authDateTime'])
+                    ? $record['authDateTime']  // authDateTime is already in DateTime format
                     : ($record['AttendanceTime'] ?? date('Y-m-d H:i:s')),
                 'verify_type' => $this->getVerifyTypeName($record['AttendanceMethod'] ?? $record['verify_type'] ?? 0),
                 'status' => $this->getStatusName($record['AttendanceState'] ?? $record['status'] ?? 0),
-                'raw_timestamp' => isset($record['AttendanceDateTime'])
-                    ? intval($record['AttendanceDateTime'] / 1000)  // Convert milliseconds to seconds
+                'raw_timestamp' => isset($record['authDateTime']) && !empty($record['authDateTime'])
+                    ? strtotime($record['authDateTime'])  // Convert DateTime string to Unix timestamp
                     : strtotime($record['AttendanceTime'] ?? 'now'),
 
                 // Additional HikVision-specific fields
                 'person_id' => $record['PersonID'] ?? null,
                 'person_name' => $record['PersonName'] ?? null,
                 'person_card_no' => $record['PerSonCardNo'] ?? null,
-                'attendance_datetime' => $record['AttendanceDateTime'] ?? null,
+                'attendance_datetime' => $record['authDateTime'] ?? null,  // Use authDateTime field
                 'attendance_state' => $record['AttendanceState'] ?? null,
                 'attendance_method' => $record['AttendanceMethod'] ?? null,
                 'device_ip_address' => $record['DeviceIPAddress'] ?? null,
