@@ -56,6 +56,19 @@ return [
             'strict' => true,
         ],
 
+        'hikvision' => [
+            'driver' => env('HIKVISION_DB_DRIVER', 'mysql'),
+            'host' => env('HIKVISION_DB_HOST', '127.0.0.1'),
+            'port' => env('HIKVISION_DB_PORT', '3306'),
+            'database' => env('HIKVISION_DB_DATABASE', 'hikvision'),
+            'username' => env('HIKVISION_DB_USERNAME', 'root'),
+            'password' => env('HIKVISION_DB_PASSWORD', ''),
+            'charset' => env('HIKVISION_DB_CHARSET', 'utf8mb4'),
+            'collation' => env('HIKVISION_DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'strict' => true,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
