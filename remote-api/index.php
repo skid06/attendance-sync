@@ -281,7 +281,7 @@ if ($method === 'GET') {
             } else {
                 // Dahua uses toggle logic - check if open entry exists
                 $office_time_entry_query = sprintf(
-                    "SELECT id FROM copy_timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) = '%s' ORDER BY time_in DESC LIMIT 1",
+                    "SELECT id FROM timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) = '%s' ORDER BY time_in DESC LIMIT 1",
                     mysqli_real_escape_string($db, $employee_id),
                     mysqli_real_escape_string($db, $recdate)
                 );
@@ -296,7 +296,7 @@ if ($method === 'GET') {
                 if ($deviceType === 'hikvision') {
                     // HikVision: Find open timesheet for this employee
                     $office_time_entry_query = sprintf(
-                        "SELECT id FROM copy_timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) = '%s' ORDER BY time_in DESC LIMIT 1",
+                        "SELECT id FROM timesheets_office_staff WHERE time_out = '0000-00-00 00:00:00' AND employee_id = '%s' AND DATE(time_in) = '%s' ORDER BY time_in DESC LIMIT 1",
                         mysqli_real_escape_string($db, $employee_id),
                         mysqli_real_escape_string($db, $recdate)
                     );
@@ -306,7 +306,7 @@ if ($method === 'GET') {
                 if (mysqli_num_rows($office_time_entry) > 0) {
                     $timesheet_id = mysqli_fetch_assoc($office_time_entry)['id'];
                     $update_query = sprintf(
-                        "UPDATE copy_timesheets_office_staff SET time_out = '%s %s', out_activity = '8', comment='Scanned Out' WHERE id = '%s'",
+                        "UPDATE timesheets_office_staff SET time_out = '%s %s', out_activity = '8', comment='Scanned Out' WHERE id = '%s'",
                         mysqli_real_escape_string($db, $recdate),
                         mysqli_real_escape_string($db, $rectime),
                         mysqli_real_escape_string($db, $timesheet_id)
@@ -350,7 +350,7 @@ if ($method === 'GET') {
                 $site = "1";
 
                 $insert_query = sprintf(
-                    "INSERT INTO copy_timesheets_office_staff (time_in, time_out, employee_id, site_id, comment) VALUES ('%s %s', '0000-00-00 00:00:00', '%s', '%s', '%s')",
+                    "INSERT INTO timesheets_office_staff (time_in, time_out, employee_id, site_id, comment) VALUES ('%s %s', '0000-00-00 00:00:00', '%s', '%s', '%s')",
                     mysqli_real_escape_string($db, $recdate),
                     mysqli_real_escape_string($db, $rectime),
                     mysqli_real_escape_string($db, $employee_id),
