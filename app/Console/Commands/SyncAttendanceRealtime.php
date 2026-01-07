@@ -165,15 +165,8 @@ class SyncAttendanceRealtime extends Command
                     // Re-index array after filtering (array_filter preserves keys)
                     $records = array_values($records);
 
-                    // Debug logging
-                    if (!empty($allRecords) && empty($records)) {
-                        Log::info("All records filtered out (already synced)", [
-                            'fetched' => count($allRecords),
-                            'after_filter' => count($records),
-                            'lastSync' => $lastSync,
-                            'lastSync_readable' => date('Y-m-d H:i:s', $lastSync),
-                        ]);
-                    } elseif (!empty($records)) {
+                    // Debug logging - only log when new records are found
+                    if (!empty($records)) {
                         Log::info("Found new records after filtering", [
                             'fetched' => count($allRecords),
                             'after_filter' => count($records),
