@@ -347,7 +347,14 @@ if ($method === 'GET') {
                     $site = mysqli_fetch_assoc($site_id_result)['site_id'];
                 }
                 */
-                $site = "1";
+
+                // Temporary fix for assigning $site. This should be based on where the app is running
+                // Set site_id based on device type
+                if ($deviceType === 'dahua') {
+                    $site = "31"; // Dahua device site
+                } else {
+                    $site = "1"; // Default site for HikVision and others
+                }
 
                 $insert_query = sprintf(
                     "INSERT INTO timesheets_office_staff (time_in, time_out, employee_id, site_id, comment) VALUES ('%s %s', '0000-00-00 00:00:00', '%s', '%s', '%s')",
