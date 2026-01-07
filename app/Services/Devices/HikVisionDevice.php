@@ -74,7 +74,7 @@ class HikVisionDevice implements AttendanceDeviceInterface
                 Log::info("Retrieved {count} records from HikVision database (last {minutes} minutes)", [
                     'count' => $rawRecords->count(),
                     'minutes' => $this->fetchMinutes,
-                    'threshold' => $epochThreshold,
+                    'threshold' => $threshold,
                 ]);
             }
 
@@ -101,9 +101,9 @@ class HikVisionDevice implements AttendanceDeviceInterface
                 ->orderBy('authDateTime', 'asc')
                 ->get();
 
-            // Only log when records are found
+            // Only log when records are found (debug level)
             if ($rawRecords->count() > 0) {
-                Log::info("Retrieved {count} new records from HikVision database", [
+                Log::debug("Retrieved {count} new records from HikVision database", [
                     'count' => $rawRecords->count(),
                     'since' => date('Y-m-d H:i:s', $unixTimestamp),
                 ]);
@@ -176,7 +176,8 @@ class HikVisionDevice implements AttendanceDeviceInterface
 
             $transformed[] = [
                 // Standardized fields
-                'employee_id' => $record['employee_id'] ?? $record['employee_id'] ?? 'Unknown',
+                'employee_id' => $record['PersonID'] ?? $record['employee_id'] ?? 'Unknown',
+                'user_id' => $record['PersonID'] ?? $record['employee_id'] ?? 'Unknown',  // For compatibility
                 'timestamp' => isset($record['authDateTime']) && !empty($record['authDateTime'])
                     ? $record['authDateTime']  // authDateTime is already in DateTime format
                     : ($record['AttendanceTime'] ?? date('Y-m-d H:i:s')),
@@ -226,7 +227,7 @@ class HikVisionDevice implements AttendanceDeviceInterface
         // Group by person to check duplicates per person
         $byPerson = [];
         foreach ($records as $record) {
-            $personId = $record['person_id'] ?? $record['user_id'] ?? 'unknown';
+            $personId = $record['employee_id'] ?? $record['person_id'] ?? $record['user_id'] ?? 'unknown';
             if (!isset($byPerson[$personId])) {
                 $byPerson[$personId] = [];
             }
